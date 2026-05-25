@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 interface SectionCardProps {
   title: string;
-  eyebrow?: string;
+  eyebrow?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;

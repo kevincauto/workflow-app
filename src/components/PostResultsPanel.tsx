@@ -24,7 +24,7 @@ export function PostResultsPanel({
           type="button"
           onClick={onPost}
           disabled={loading || approvedCount === 0}
-          className="min-h-13 rounded-2xl border border-cyan-100/50 bg-[linear-gradient(180deg,#a5f3fc_0%,#22d3ee_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_48px_rgba(34,211,238,0.36),inset_0_1px_0_rgba(255,255,255,0.75)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          className="min-h-13 rounded-2xl border border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {loading ? "Posting Comments..." : "Post Approved Comments"}
         </button>

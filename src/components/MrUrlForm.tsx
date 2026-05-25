@@ -40,12 +40,11 @@ export function MrUrlForm({
   return (
     <div className="space-y-4">
       <div className="rounded-[28px] border border-white/12 bg-slate-950/50 p-4">
-        <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            {/* <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
               Open Merge Requests
-            </p> */}
-            <p className="mt-1 text-sm text-slate-100">Open Merge Requests</p>
+            </p>
           </div>
           <button
             type="button"
@@ -199,7 +198,7 @@ export function MrUrlForm({
           type="button"
           onClick={onSubmit}
           disabled={loading}
-          className="min-h-13 rounded-2xl border border-cyan-100/50 bg-[linear-gradient(180deg,#a5f3fc_0%,#22d3ee_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_48px_rgba(34,211,238,0.36),inset_0_1px_0_rgba(255,255,255,0.75)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          className="min-h-13 rounded-2xl border border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {loading ? "Loading Merge Request..." : "Load Merge Request"}
         </button>

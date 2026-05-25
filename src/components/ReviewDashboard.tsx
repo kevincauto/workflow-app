@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { FindingsList } from "@/components/FindingsList";
 import { HeroLogo } from "@/components/HeroLogo";
@@ -38,6 +38,17 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
   }
 
   return data;
+}
+
+function MedicalEyebrow({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm text-red-500 shadow-sm">
+        <span className="translate-x-[2px] text-lg leading-none">✚</span>
+      </span>
+      {children}
+    </>
+  );
 }
 
 export function ReviewDashboard() {
@@ -236,7 +247,11 @@ export function ReviewDashboard() {
 
         <SectionCard
           title="Select an open merge request from the dropdown or paste in a url."
-          eyebrow="1. Select A Patient 🤒🤕😷"
+          eyebrow={
+            <MedicalEyebrow>
+              Select A Patient 🤒🤕😷
+            </MedicalEyebrow>
+          }
           className="relative z-40"
         >
           <MrUrlForm
@@ -272,13 +287,20 @@ export function ReviewDashboard() {
         {mergeRequest ? (
           <SectionCard
             title="Merge Request Summary"
-            eyebrow="2. Gather Medical History 🚑"
+            eyebrow={
+              <MedicalEyebrow>
+                Gather Medical History 🚑
+              </MedicalEyebrow>
+            }
           >
             <MrDetailsCard mergeRequest={mergeRequest} />
           </SectionCard>
         ) : null}
 
-        <SectionCard title="Jira Context" eyebrow="3. Check The Charts 📈">
+        <SectionCard
+          title="Jira Context"
+          eyebrow={<MedicalEyebrow>Check The Charts 📈</MedicalEyebrow>}
+        >
           <JiraPanel
             candidates={jiraCandidates}
             jiraIssue={jiraIssue}
@@ -289,7 +311,10 @@ export function ReviewDashboard() {
           />
         </SectionCard>
 
-        <SectionCard title="AI Review" eyebrow="4. Consult The Specialist 🧑‍⚕️">
+        <SectionCard
+          title="AI Review"
+          eyebrow={<MedicalEyebrow>Consult The Specialist 🧑‍⚕️</MedicalEyebrow>}
+        >
           <ReviewControls
             onGenerate={handleGenerateReview}
             loading={loadingReview}
@@ -299,13 +324,16 @@ export function ReviewDashboard() {
 
         {review ? (
           <>
-            <SectionCard title="Review Summary" eyebrow="5. Diagnosis 🩺">
+            <SectionCard
+              title="Review Summary"
+              eyebrow={<MedicalEyebrow>Diagnosis 🩺</MedicalEyebrow>}
+            >
               <ReviewSummary summary={review.summary} />
             </SectionCard>
 
             <SectionCard
               title="Edit and Review Findings"
-              eyebrow="6. Treatment Plan 🏥"
+              eyebrow={<MedicalEyebrow>Treatment Plan 🏥</MedicalEyebrow>}
             >
               <FindingsList
                 findings={review.findings}
@@ -323,7 +351,7 @@ export function ReviewDashboard() {
 
             <SectionCard
               title="Publish Comment Directly in GitLab"
-              eyebrow="7. Discharge Patient ✅"
+              eyebrow={<MedicalEyebrow>Discharge Patient ✅</MedicalEyebrow>}
             >
               <PostResultsPanel
                 results={postResults}
