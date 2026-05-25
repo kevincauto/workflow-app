@@ -20,7 +20,7 @@ export function FindingCard({
   onCommentChange,
 }: FindingCardProps) {
   return (
-    <article className="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+    <article className="rounded-3xl border border-white/10 bg-slate-950/55 p-5">
       <div className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.14em]">
@@ -29,15 +29,15 @@ export function FindingCard({
             >
               {finding.severity} Severity
             </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
+            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-slate-100">
               {finding.category}
             </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
+            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-slate-100">
               {finding.filePath ?? "General comment"}
               {finding.lineStart ? `:${finding.lineStart}` : ""}
             </span>
           </div>
-          <label className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white lg:self-start">
+          <label className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-50 lg:self-start">
             <input
               type="checkbox"
               checked={finding.approved}
@@ -66,11 +66,11 @@ export function FindingCard({
         </pre>
       ) : null}
 
-      <details className="mt-4 rounded-2xl border border-white/8 bg-white/4 p-4">
+      <details className="mt-4 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
         <summary className="cursor-pointer text-sm font-medium text-slate-100">
           Reviewer rationale
         </summary>
-        <p className="mt-3 text-sm leading-6 text-slate-300">
+        <p className="mt-3 text-sm leading-6 text-slate-200">
           {finding.rationale}
         </p>
       </details>

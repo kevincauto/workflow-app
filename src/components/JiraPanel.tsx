@@ -36,19 +36,19 @@ export function JiraPanel({
             type="button"
             onClick={onResolve}
             disabled={loading || !selectedKey}
-            className="rounded-2xl border border-cyan-300/40 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/10 disabled:opacity-50"
+            className="rounded-2xl border border-cyan-300/50 bg-slate-950/25 px-4 py-3 text-sm font-semibold text-cyan-50 transition hover:bg-slate-950/40 disabled:opacity-50"
           >
-            {loading ? "Loading Jira..." : "Load Jira context"}
+            {loading ? "Loading Jira..." : "Load Jira Context"}
           </button>
         </div>
       ) : null}
 
       {jiraIssue ? (
-        <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/8 p-4">
+        <div className="rounded-2xl border border-emerald-300/25 bg-slate-950/45 p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-emerald-200">
             {jiraIssue.key}
           </p>
-          <h3 className="mt-2 text-base font-semibold text-white">
+          <h3 className="mt-2 text-base font-semibold text-slate-50">
             {jiraIssue.summary}
           </h3>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-100">
@@ -56,7 +56,7 @@ export function JiraPanel({
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/15 p-4 text-sm text-slate-300">
+        <div className="rounded-2xl border border-dashed border-white/20 bg-slate-950/25 p-4 text-sm text-slate-200">
           {candidates.length === 0
             ? "No Jira ticket detected. Review generation will continue without Jira acceptance criteria context."
             : "Choose a Jira key to load ticket context before generating the review."}

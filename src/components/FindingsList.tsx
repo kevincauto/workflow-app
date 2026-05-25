@@ -27,10 +27,10 @@ export function FindingsList({
       {Object.entries(grouped).map(([group, groupFindings]) => (
         <div key={group} className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-100">
               {group}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-300">
               {groupFindings.length} findings
             </p>
           </div>

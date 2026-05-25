@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { FindingsList } from "@/components/FindingsList";
+import { HeroLogo } from "@/components/HeroLogo";
 import { JiraPanel } from "@/components/JiraPanel";
 import { MrDetailsCard } from "@/components/MrDetailsCard";
 import { MrUrlForm } from "@/components/MrUrlForm";
@@ -229,38 +230,13 @@ export function ReviewDashboard() {
     review?.findings.filter((finding) => finding.approved).length ?? 0;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_8%_12%,_rgba(125,211,252,0.44),_transparent_20%),radial-gradient(circle_at_88%_10%,_rgba(96,165,250,0.30),_transparent_18%),radial-gradient(circle_at_92%_74%,_rgba(56,189,248,0.28),_transparent_24%),radial-gradient(circle_at_18%_86%,_rgba(14,165,233,0.22),_transparent_18%),radial-gradient(circle_at_48%_38%,_rgba(59,130,246,0.18),_transparent_26%),linear-gradient(155deg,_#010312_0%,_#071426_24%,_#0c1630_48%,_#031b2d_72%,_#020617_100%)] px-4 py-10 text-white sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,_rgba(30,64,175,0.42),_transparent_24%),radial-gradient(circle_at_86%_12%,_rgba(79,70,229,0.42),_transparent_24%),radial-gradient(circle_at_78%_34%,_rgba(251,146,60,0.34),_transparent_20%),radial-gradient(circle_at_96%_72%,_rgba(34,211,238,0.42),_transparent_28%),radial-gradient(circle_at_12%_88%,_rgba(14,165,233,0.38),_transparent_24%),radial-gradient(circle_at_30%_66%,_rgba(249,115,22,0.26),_transparent_22%),radial-gradient(circle_at_54%_48%,_rgba(37,99,235,0.26),_transparent_32%),linear-gradient(155deg,_#020617_0%,_#082f49_22%,_#172554_46%,_#033348_72%,_#010312_100%)] bg-fixed px-4 py-10 text-white sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="rounded-[32px] border border-white/10 bg-black/20 px-6 py-8 shadow-[0_28px_120px_rgba(8,15,31,0.5)] backdrop-blur">
-          <p className="text-md font-semibold uppercase tracking-[0.3em] text-cyan-200/80">
-            Diagnose Risky Code Before You Merge
-          </p>
-          <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                Merge Medic AI 👨🏼‍⚕️🏥
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">
-                An automated code review assistant, fully integrated with GitLab
-                and Jira, powered by AI, and ready to help supercharge your
-                peer-review workflow by avoiding bugs and security issues in
-                your codebase.
-                {/* <li>Load a GitLab merge request</li>
-                <li>Enrich it with Jira acceptance context</li>
-                <li>Generate high-value review comments, edit approvals,</li>
-                <li>And post the approved set back to GitLab.</li> */}
-              </p>
-            </div>
-            {/* <div className="rounded-3xl border border-cyan-300/25 bg-cyan-400/8 px-5 py-4 text-sm text-cyan-50">
-              Demo-ready with live integrations when env vars are configured,
-              and resilient mock mode when they are not.
-            </div> */}
-          </div>
-        </header>
+        <HeroLogo />
 
         <SectionCard
           title="Select an open merge request from the dropdown or paste in a url."
-          eyebrow="1. Select A Patient 🤒🤕"
+          eyebrow="1. Select A Patient 🤒🤕😷"
           className="relative z-40"
         >
           <MrUrlForm
@@ -284,7 +260,7 @@ export function ReviewDashboard() {
               {notices.map((notice, index) => (
                 <p
                   key={`notice-${index}`}
-                  className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-slate-200"
+                  className="rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-slate-100"
                 >
                   {notice}
                 </p>

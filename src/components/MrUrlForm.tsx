@@ -39,19 +39,19 @@ export function MrUrlForm({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[28px] border border-white/10 bg-slate-950/35 p-4">
+      <div className="rounded-[28px] border border-white/12 bg-slate-950/50 p-4">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             {/* <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">
               Open Merge Requests
             </p> */}
-            <p className="mt-1 text-sm text-slate-300">Open Merge Requests</p>
+            <p className="mt-1 text-sm text-slate-100">Open Merge Requests</p>
           </div>
           <button
             type="button"
             onClick={onRefreshOpenMrs}
             disabled={loadingOpenMrs}
-            className="min-h-11 rounded-2xl border border-white/15 bg-white/6 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-11 rounded-2xl border border-white/20 bg-slate-950/35 px-4 py-2.5 text-sm font-semibold text-slate-50 transition hover:bg-slate-950/50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingOpenMrs ? "Refreshing..." : "Refresh open MRs"}
           </button>
@@ -67,7 +67,7 @@ export function MrUrlForm({
           >
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
                   {selectedMergeRequest
                     ? "Selected Merge Request"
                     : "Open Merge Requests"}
@@ -77,19 +77,19 @@ export function MrUrlForm({
                     <p className="truncate text-sm font-semibold text-white">
                       !{selectedMergeRequest.iid} {selectedMergeRequest.title}
                     </p>
-                    <p className="mt-1 truncate text-xs text-slate-300">
+                    <p className="mt-1 truncate text-xs text-slate-200">
                       {selectedMergeRequest.sourceBranch} to{" "}
                       {selectedMergeRequest.targetBranch} by{" "}
                       {selectedMergeRequest.author}
                     </p>
                   </div>
                 ) : (
-                  <p className="mt-1 text-sm text-slate-200">
+                  <p className="mt-1 text-sm text-slate-100">
                     Select an open merge request
                   </p>
                 )}
               </div>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/6 text-cyan-100/80">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-slate-950/30 text-cyan-50">
                 <svg
                   width="18"
                   height="18"
@@ -115,7 +115,7 @@ export function MrUrlForm({
 
           {isPickerOpen ? (
             <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-30 overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(180deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] shadow-[0_24px_90px_rgba(2,6,23,0.65)] backdrop-blur-xl">
-              <div className="border-b border-white/8 px-4 py-3 text-xs uppercase tracking-[0.18em] text-slate-400">
+              <div className="border-b border-white/8 px-4 py-3 text-xs uppercase tracking-[0.18em] text-slate-300">
                 {openMergeRequests.length} open merge requests
               </div>
               <div className="max-h-80 overflow-y-auto p-2">
@@ -144,7 +144,7 @@ export function MrUrlForm({
                             <p className="truncate text-sm font-semibold text-white">
                               !{mergeRequest.iid} {mergeRequest.title}
                             </p>
-                            <p className="mt-1 truncate text-xs text-slate-300">
+                            <p className="mt-1 truncate text-xs text-slate-200">
                               {mergeRequest.sourceBranch} to{" "}
                               {mergeRequest.targetBranch}
                             </p>
@@ -155,14 +155,14 @@ export function MrUrlForm({
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-2 text-xs text-slate-400">
+                        <p className="mt-2 text-xs text-slate-300">
                           {mergeRequest.author}
                         </p>
                       </button>
                     );
                   })
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-300">
+                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-200">
                     No open merge requests were returned for the configured
                     project.
                   </div>
@@ -183,7 +183,7 @@ export function MrUrlForm({
       </div>
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-white/10" />
-        <span className="text-xs uppercase tracking-[0.24em] text-slate-400">
+        <span className="text-xs uppercase tracking-[0.24em] text-slate-300">
           or
         </span>
         <div className="h-px flex-1 bg-white/10" />
@@ -199,9 +199,9 @@ export function MrUrlForm({
           type="button"
           onClick={onSubmit}
           disabled={loading}
-          className="min-h-13 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+          className="min-h-13 rounded-2xl border border-cyan-100/50 bg-[linear-gradient(180deg,#a5f3fc_0%,#22d3ee_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_48px_rgba(34,211,238,0.36),inset_0_1px_0_rgba(255,255,255,0.75)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
-          {loading ? "Loading merge request..." : "Load merge request"}
+          {loading ? "Loading Merge Request..." : "Load Merge Request"}
         </button>
       </div>
     </div>
