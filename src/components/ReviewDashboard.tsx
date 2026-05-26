@@ -246,7 +246,7 @@ export function ReviewDashboard() {
         <HeroLogo />
 
         <SectionCard
-          title="Select an open merge request from the dropdown or paste in a url."
+          title="Select a Merge Request or Paste a URL"
           eyebrow={
             <MedicalEyebrow>
               Select A Patient 🤒🤕😷
@@ -312,7 +312,7 @@ export function ReviewDashboard() {
         </SectionCard>
 
         <SectionCard
-          title="AI Review"
+          title="Generate an AI-Powered Review"
           eyebrow={<MedicalEyebrow>Consult The Specialist 🧑‍⚕️</MedicalEyebrow>}
         >
           <ReviewControls

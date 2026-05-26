@@ -13,7 +13,7 @@ export function ReviewControls({
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
         <p className="text-sm text-slate-100">
-          Generate 3 to 10 high-value findings using the loaded merge request,
+          Generate high-value findings using the loaded merge request,
           Jira context, diff hunks, changed file contents, and bounded
           related-file retrieval.
         </p>

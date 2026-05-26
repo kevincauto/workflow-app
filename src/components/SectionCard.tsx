@@ -26,7 +26,9 @@ export function SectionCard({
               {eyebrow}
             </p>
           ) : null}
-          <h2 className="mt-2 text-xl font-semibold text-slate-50">{title}</h2>
+          <h2 className="mt-2 text-xl font-semibold text-orange-300">
+            {title}
+          </h2>
         </div>
         {actions}
       </div>

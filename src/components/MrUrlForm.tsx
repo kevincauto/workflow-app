@@ -42,7 +42,7 @@ export function MrUrlForm({
       <div className="rounded-[28px] border border-white/12 bg-slate-950/50 p-4">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+            <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
               Open Merge Requests
             </p>
           </div>
@@ -66,7 +66,7 @@ export function MrUrlForm({
           >
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+                <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
                   {selectedMergeRequest
                     ? "Selected Merge Request"
                     : "Open Merge Requests"}
@@ -114,7 +114,7 @@ export function MrUrlForm({
 
           {isPickerOpen ? (
             <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-30 overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(180deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] shadow-[0_24px_90px_rgba(2,6,23,0.65)] backdrop-blur-xl">
-              <div className="border-b border-white/8 px-4 py-3 text-xs uppercase tracking-[0.18em] text-slate-300">
+              <div className="border-b border-white/8 px-4 py-3 text-xs uppercase tracking-[0.18em] text-orange-300">
                 {openMergeRequests.length} open merge requests
               </div>
               <div className="max-h-80 overflow-y-auto p-2">

@@ -8,7 +8,7 @@ export function MrDetailsCard({ mergeRequest }: MrDetailsCardProps) {
   return (
     <div className="grid gap-4 md:grid-cols-6">
       <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 md:col-span-6">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+        <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
           Title
         </p>
         <p className="mt-2 text-base font-medium text-slate-50">
@@ -18,7 +18,7 @@ export function MrDetailsCard({ mergeRequest }: MrDetailsCardProps) {
 
       <div className="grid gap-4 md:col-span-6 md:grid-cols-6">
         <div className="min-h-[116px] rounded-2xl border border-cyan-300/20 bg-slate-950/50 p-4 md:col-span-2">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+          <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
             Source Branch
           </p>
           <p className="mt-2 break-all text-sm font-medium text-slate-50">
@@ -47,7 +47,7 @@ export function MrDetailsCard({ mergeRequest }: MrDetailsCardProps) {
         </div>
 
         <div className="min-h-[116px] rounded-2xl border border-emerald-300/20 bg-slate-950/50 p-4 md:col-span-2">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+          <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
             Target Branch
           </p>
           <p className="mt-2 break-all text-sm font-medium text-slate-50">
@@ -57,14 +57,14 @@ export function MrDetailsCard({ mergeRequest }: MrDetailsCardProps) {
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 md:col-span-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+        <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
           Project
         </p>
         <p className="mt-2 text-sm text-slate-50">{mergeRequest.projectPath}</p>
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 md:col-span-2">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+        <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
           Changed Files
         </p>
         <p className="mt-2 text-sm text-slate-50">
@@ -73,7 +73,7 @@ export function MrDetailsCard({ mergeRequest }: MrDetailsCardProps) {
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 md:col-span-6">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+        <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
           Description
         </p>
         <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-100">
