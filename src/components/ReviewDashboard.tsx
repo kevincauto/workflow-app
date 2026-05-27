@@ -350,7 +350,7 @@ export function ReviewDashboard() {
             </SectionCard>
 
             <SectionCard
-              title="Publish Comment Directly in GitLab"
+              title="Publish Comments Directly in GitLab"
               eyebrow={<MedicalEyebrow>Discharge Patient ✅</MedicalEyebrow>}
             >
               <PostResultsPanel
