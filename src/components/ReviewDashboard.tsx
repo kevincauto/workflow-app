@@ -51,6 +51,35 @@ function MedicalEyebrow({ children }: { children: ReactNode }) {
   );
 }
 
+function SeverityRubricTooltip() {
+  return (
+    <details className="relative">
+      <summary className="list-none cursor-pointer rounded-full border border-white/20 bg-slate-950/45 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-orange-300 transition hover:bg-slate-950/60">
+        Severity Rubric
+      </summary>
+      <div className="absolute right-0 z-20 mt-2 w-[320px] rounded-2xl border border-white/15 bg-slate-950/95 p-4 text-sm text-slate-100 shadow-[0_22px_60px_rgba(2,6,23,0.65)] backdrop-blur-xl">
+        <p className="font-semibold text-orange-300">High</p>
+        <p className="mt-1 text-slate-200">
+          Likely production incident, security exposure, data loss/corruption,
+          auth/permission bypass, or critical-path breakage.
+        </p>
+
+        <p className="mt-3 font-semibold text-orange-300">Medium</p>
+        <p className="mt-1 text-slate-200">
+          Meaningful functional or reliability impact. Jira acceptance-criteria
+          mismatch is always at least Medium.
+        </p>
+
+        <p className="mt-3 font-semibold text-orange-300">Low</p>
+        <p className="mt-1 text-slate-200">
+          Non-blocking maintainability or observability improvements, minor
+          edge cases, and test gaps by default.
+        </p>
+      </div>
+    </details>
+  );
+}
+
 export function ReviewDashboard() {
   const [mrUrl, setMrUrl] = useState("");
   const [openMergeRequests, setOpenMergeRequests] = useState<
@@ -334,6 +363,7 @@ export function ReviewDashboard() {
             <SectionCard
               title="Edit and Review Findings"
               eyebrow={<MedicalEyebrow>Treatment Plan 🏥</MedicalEyebrow>}
+              actions={<SeverityRubricTooltip />}
             >
               <FindingsList
                 findings={review.findings}

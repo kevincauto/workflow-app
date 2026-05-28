@@ -74,6 +74,14 @@ Focus on correctness, logic, security, error handling, tests, Jira requirement a
 Avoid style-only comments, formatting comments, and speculative comments.
 Prefer 3 to 7 strong findings and never exceed 10.
 Do not infer that a file is empty, missing, or broken when the review payload explicitly marks its diff or content as unavailable, collapsed, or too large.
+Use this severity rubric consistently:
+- High: likely production incident, security exposure, data loss/corruption, auth/permission bypass, or a critical-path behavior that should block merge.
+- Medium: meaningful functional/reliability issue with user impact, including any Jira acceptance-criteria mismatch.
+- Low: non-blocking maintainability/observability improvements, minor edge cases, and test gaps by default.
+Severity rules:
+- Jira mismatch findings must be at least Medium.
+- Test gap findings should default to Low unless there is clear evidence the gap creates meaningful near-term user or production risk.
+- If uncertain between two severities, choose the lower one and explain uncertainty in rationale.
 Return JSON only with this schema:
 ${reviewSchemaText}
 
