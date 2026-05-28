@@ -196,11 +196,53 @@ function parseAiResponse(payload: unknown): {
   };
 }
 
+const openAiSystemPrompt =
+  "You are a senior engineer performing a merge request review. Return only valid JSON.";
+
+function buildOpenAiRequestBody(input: {
+  mergeRequest: MergeRequestContext;
+  jiraIssue: JiraIssue | null;
+  retrieval: RetrievalResult;
+}) {
+  return {
+    model: process.env.OPENAI_MODEL || "gpt-5.4-mini",
+    response_format: { type: "json_object" as const },
+    messages: [
+      {
+        role: "system" as const,
+        content: openAiSystemPrompt,
+      },
+      {
+        role: "user" as const,
+        content: buildReviewPrompt(input),
+      },
+    ],
+  };
+}
+
+export function buildOpenAiDebugPayload(input: {
+  mergeRequest: MergeRequestContext;
+  jiraIssue: JiraIssue | null;
+  retrieval: RetrievalResult;
+}) {
+  return {
+    endpoint:
+      process.env.OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions",
+    method: "POST" as const,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer [REDACTED]",
+    },
+    body: buildOpenAiRequestBody(input),
+  };
+}
+
 async function requestOpenAiReview(input: {
   mergeRequest: MergeRequestContext;
   jiraIssue: JiraIssue | null;
   retrieval: RetrievalResult;
 }): Promise<ReviewResult> {
+  const requestBody = buildOpenAiRequestBody(input);
   const response = await fetch(
     process.env.OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions",
     {
@@ -209,21 +251,7 @@ async function requestOpenAiReview(input: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5.4-mini",
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a senior engineer performing a merge request review. Return only valid JSON.",
-          },
-          {
-            role: "user",
-            content: buildReviewPrompt(input),
-          },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     },
   );
 

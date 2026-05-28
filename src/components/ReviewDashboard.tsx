@@ -101,6 +101,7 @@ export function ReviewDashboard() {
   const [loadingReview, setLoadingReview] = useState(false);
   const [posting, setPosting] = useState(false);
   const [loadingOpenMrs, setLoadingOpenMrs] = useState(false);
+  const [downloadingPayload, setDownloadingPayload] = useState(false);
 
   async function loadOpenMergeRequests() {
     setLoadingOpenMrs(true);
@@ -266,6 +267,57 @@ export function ReviewDashboard() {
     }
   }
 
+  async function handleDownloadAiPayload() {
+    if (!mergeRequest || !review) {
+      return;
+    }
+
+    setError(null);
+    setDownloadingPayload(true);
+
+    try {
+      const payloadResponse = await postJson<{
+        generatedAt: string;
+        payload: unknown;
+        retrieval: ReviewResult["retrieval"];
+      }>("/api/review/payload", {
+        mergeRequest,
+        jiraIssue,
+        retrieval: review.retrieval,
+      });
+
+      const debugBundle = {
+        generatedAt: payloadResponse.generatedAt,
+        mergeRequest,
+        jiraIssue,
+        retrieval: payloadResponse.retrieval,
+        aiRequest: payloadResponse.payload,
+      };
+
+      const blob = new Blob([JSON.stringify(debugBundle, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const safeProject = mergeRequest.projectName.replace(/[^a-z0-9-_]/gi, "-");
+
+      link.href = url;
+      link.download = `ai-review-payload-${safeProject}-mr-${mergeRequest.iid}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to download AI payload.",
+      );
+    } finally {
+      setDownloadingPayload(false);
+    }
+  }
+
   const approvedCount =
     review?.findings.filter((finding) => finding.approved).length ?? 0;
 
@@ -356,6 +408,19 @@ export function ReviewDashboard() {
             <SectionCard
               title="Review Summary"
               eyebrow={<MedicalEyebrow>Diagnosis 🩺</MedicalEyebrow>}
+              actions={
+                <button
+                  type="button"
+                  onClick={handleDownloadAiPayload}
+                  disabled={downloadingPayload}
+                  style={{ fontSize: "12px" }}
+                  className="rounded-full border border-white/20 bg-slate-950/45 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-orange-300 transition hover:bg-slate-950/60 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {downloadingPayload
+                    ? "Preparing Payload..."
+                    : "Download AI Payload"}
+                </button>
+              }
             >
               <ReviewSummary summary={review.summary} />
             </SectionCard>
