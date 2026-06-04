@@ -426,7 +426,7 @@ export function ReviewDashboard() {
             </SectionCard>
 
             <SectionCard
-              title="Edit and Review Findings"
+              title="Review Findings and Edit Comments"
               eyebrow={<MedicalEyebrow>Treatment Plan 🏥</MedicalEyebrow>}
               actions={<SeverityRubricTooltip />}
             >
