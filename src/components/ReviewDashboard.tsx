@@ -80,6 +80,13 @@ function SeverityRubricTooltip() {
   );
 }
 
+function formatReviewDuration(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes} minutes and ${seconds} seconds`;
+}
+
 export function ReviewDashboard() {
   const [mrUrl, setMrUrl] = useState("");
   const [openMergeRequests, setOpenMergeRequests] = useState<
@@ -93,6 +100,9 @@ export function ReviewDashboard() {
   const [selectedJiraKey, setSelectedJiraKey] = useState("");
   const [jiraIssue, setJiraIssue] = useState<JiraIssue | null>(null);
   const [review, setReview] = useState<ReviewResult | null>(null);
+  const [reviewDurationSeconds, setReviewDurationSeconds] = useState<
+    number | null
+  >(null);
   const [postResults, setPostResults] = useState<PostResult[]>([]);
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +153,7 @@ export function ReviewDashboard() {
   async function handleLoadMergeRequest() {
     setError(null);
     setReview(null);
+    setReviewDurationSeconds(null);
     setPostResults([]);
     setLoadingMr(true);
 
@@ -198,14 +209,19 @@ export function ReviewDashboard() {
 
     setError(null);
     setLoadingReview(true);
+    setReviewDurationSeconds(null);
     setPostResults([]);
+    const startedAt = performance.now();
 
     try {
       const data = await postJson<ReviewResult>("/api/review/generate", {
         mergeRequest,
         jiraIssue,
       });
+      const elapsedSeconds = Math.round((performance.now() - startedAt) / 1000);
+
       setReview(data);
+      setReviewDurationSeconds(elapsedSeconds);
       setNotices((current) => [
         ...current.filter((notice) => !notice.startsWith("Review source:")),
         `Review source: ${data.source}. Retrieval gathered ${data.retrieval.relatedFiles.length} related files.`,
@@ -409,17 +425,25 @@ export function ReviewDashboard() {
               title="Review Summary"
               eyebrow={<MedicalEyebrow>Diagnosis 🩺</MedicalEyebrow>}
               actions={
-                <button
-                  type="button"
-                  onClick={handleDownloadAiPayload}
-                  disabled={downloadingPayload}
-                  style={{ fontSize: "12px" }}
-                  className="rounded-full border border-white/20 bg-slate-950/45 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-orange-300 transition hover:bg-slate-950/60 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {downloadingPayload
-                    ? "Preparing Payload..."
-                    : "Download AI Payload"}
-                </button>
+                <div className="flex flex-col items-end gap-2 text-right sm:flex-row sm:items-center">
+                  {reviewDurationSeconds !== null ? (
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-100">
+                      AI Review Took:{" "}
+                      {formatReviewDuration(reviewDurationSeconds)}
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleDownloadAiPayload}
+                    disabled={downloadingPayload}
+                    style={{ fontSize: "12px" }}
+                    className="rounded-full border border-white/20 bg-slate-950/45 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-orange-300 transition hover:bg-slate-950/60 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {downloadingPayload
+                      ? "Preparing Payload..."
+                      : "Download AI Payload"}
+                  </button>
+                </div>
               }
             >
               <ReviewSummary summary={review.summary} />
