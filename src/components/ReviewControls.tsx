@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 interface ReviewControlsProps {
   onGenerate: () => void;
   loading: boolean;
@@ -9,6 +11,29 @@ export function ReviewControls({
   loading,
   canGenerate,
 }: ReviewControlsProps) {
+  const [dotCount, setDotCount] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setDotCount((current) => (current + 1) % 4);
+    }, 500);
+
+    return () => window.clearInterval(intervalId);
+  }, [loading]);
+
+  const buttonLabel = loading
+    ? `Thinking${".".repeat(dotCount)}`
+    : "Generate Review";
+
+  function handleGenerate() {
+    setDotCount(0);
+    onGenerate();
+  }
+
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
@@ -20,11 +45,13 @@ export function ReviewControls({
       </div>
       <button
         type="button"
-        onClick={onGenerate}
+        onClick={handleGenerate}
         disabled={loading || !canGenerate}
         className="min-h-13 rounded-2xl border border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
       >
-        {loading ? "Generating Review..." : "Generate Review"}
+        <span aria-live="polite" className="inline-block min-w-24 text-left">
+          {buttonLabel}
+        </span>
       </button>
     </div>
   );
