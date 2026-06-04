@@ -19,22 +19,60 @@ export function FindingCard({
   onToggleApproved,
   onCommentChange,
 }: FindingCardProps) {
+  async function copyFilePath() {
+    if (!finding.filePath) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(finding.filePath);
+  }
+
   return (
     <article className="rounded-3xl border border-white/10 bg-slate-950/55 p-5">
       <div className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.14em]">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
             <span
-              className={`rounded-full border px-3 py-1 ${severityStyles[finding.severity]}`}
+              className={`inline-flex h-7 items-center rounded-full border px-3 leading-none uppercase tracking-[0.14em] ${severityStyles[finding.severity]}`}
             >
               {finding.severity} Severity
             </span>
-            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-slate-100">
+            <span className="inline-flex h-7 items-center rounded-full border border-white/10 bg-white/10 px-3 leading-none uppercase tracking-[0.14em] text-slate-100">
               {finding.category}
             </span>
-            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-slate-100">
-              {finding.filePath ?? "General comment"}
-              {finding.lineStart ? `:${finding.lineStart}` : ""}
+            <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 leading-none text-slate-100">
+              <span className="leading-none">
+                {finding.filePath ?? "General comment"}
+                {finding.lineStart ? `:${finding.lineStart}` : ""}
+              </span>
+              {finding.filePath ? (
+                <button
+                  type="button"
+                  onClick={() => void copyFilePath()}
+                  className="-mr-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+                  aria-label={`Copy file path ${finding.filePath}`}
+                  title="Copy file path"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    className="h-3.5 w-3.5"
+                  >
+                    <path
+                      d="M7 7.5A1.5 1.5 0 0 1 8.5 6h6A1.5 1.5 0 0 1 16 7.5v6a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 7 13.5v-6Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M4 11.5v-6A1.5 1.5 0 0 1 5.5 4h6"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              ) : null}
             </span>
           </div>
           <label className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-50 lg:self-start">
