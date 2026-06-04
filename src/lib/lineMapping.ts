@@ -9,6 +9,12 @@ interface AddedLine {
   content: string;
 }
 
+const markdownBacktickLookalikes = /[\u00b4\u2018\u2019\u2032\u02cb]/g;
+
+export function normalizeMarkdownBackticks(text: string) {
+  return text.replace(markdownBacktickLookalikes, "`");
+}
+
 function parseAddedLines(diff: string): AddedLine[] {
   const lines = diff.split("\n");
   const addedLines: AddedLine[] = [];
@@ -96,9 +102,11 @@ export function normalizeFindingsAgainstDiff(
 }
 
 export function getCommentBody(finding: ReviewFinding): string {
+  const commentText = normalizeMarkdownBackticks(finding.commentText);
+
   if (finding.isGeneralComment && finding.filePath) {
-    return `${finding.filePath}: ${finding.commentText}`;
+    return `${finding.filePath}: ${commentText}`;
   }
 
-  return finding.commentText;
+  return commentText;
 }

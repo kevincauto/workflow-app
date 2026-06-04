@@ -1,4 +1,7 @@
-import { normalizeFindingsAgainstDiff } from "@/lib/lineMapping";
+import {
+  normalizeFindingsAgainstDiff,
+  normalizeMarkdownBackticks,
+} from "@/lib/lineMapping";
 import { buildReviewPrompt } from "@/lib/prompt";
 import type {
   JiraIssue,
@@ -19,6 +22,7 @@ function createFinding(
 ): ReviewFinding {
   return {
     ...seed,
+    commentText: normalizeMarkdownBackticks(seed.commentText),
     id: `finding-${index + 1}`,
     approved: true,
   };
