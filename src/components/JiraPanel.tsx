@@ -45,7 +45,7 @@ export function JiraPanel({
 
       {jiraIssue ? (
         <div className="rounded-2xl border border-emerald-300/25 bg-slate-950/45 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-emerald-200">
+          <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
             {jiraIssue.key}
           </p>
           <h3 className="mt-2 text-base font-semibold text-slate-50">
