@@ -44,12 +44,12 @@ export function HeroLogo() {
         </div>
 
         <p className="border-cyan-200/20 text-base leading-7 text-slate-100 lg:border-l lg:pl-7">
-          An automated code review assistant, fully integrated with{" "}
+          An automated code review agent, integrated with{" "}
           <span className="text-orange-300">GitLab</span> and{" "}
           <span className="text-orange-300">Jira</span>, powered by{" "}
           <span className="text-orange-300">AI</span>, and ready to 
-          supercharge your peer-review workflow by avoiding bugs and security
-          issues in your codebase.
+          supercharge your peer-review workflow. Your
+          second set of eyes before code reaches customers.
         </p>
       </div>
     </header>

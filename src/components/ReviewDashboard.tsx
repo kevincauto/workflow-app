@@ -432,7 +432,8 @@ export function ReviewDashboard() {
                       {formatReviewDuration(reviewDurationSeconds)}
                     </p>
                   ) : null}
-                  <button
+                  {/* removing but not deleting the download button for now */}
+                  {/* <button
                     type="button"
                     onClick={handleDownloadAiPayload}
                     disabled={downloadingPayload}
@@ -442,7 +443,7 @@ export function ReviewDashboard() {
                     {downloadingPayload
                       ? "Preparing Payload..."
                       : "Download AI Payload"}
-                  </button>
+                  </button> */}
                 </div>
               }
             >
