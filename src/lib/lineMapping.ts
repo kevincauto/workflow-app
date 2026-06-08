@@ -10,6 +10,7 @@ interface AddedLine {
 }
 
 const markdownBacktickLookalikes = /[\u00b4\u2018\u2019\u2032\u02cb]/g;
+const aiAssistedCommentPrefix = "[AI Assisted] ";
 
 export function normalizeMarkdownBackticks(text: string) {
   return text.replace(markdownBacktickLookalikes, "`");
@@ -105,8 +106,8 @@ export function getCommentBody(finding: ReviewFinding): string {
   const commentText = normalizeMarkdownBackticks(finding.commentText);
 
   if (finding.isGeneralComment && finding.filePath) {
-    return `${finding.filePath}: ${commentText}`;
+    return `${aiAssistedCommentPrefix}${finding.filePath}: ${commentText}`;
   }
 
-  return commentText;
+  return `${aiAssistedCommentPrefix}${commentText}`;
 }
