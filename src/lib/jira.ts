@@ -2,6 +2,11 @@ import { mockJiraIssue } from "@/lib/mockData";
 import type { JiraCandidate, JiraIssue } from "@/lib/types";
 
 const jiraKeyPattern = /\b[A-Z][A-Z0-9]+-\d+\b/g;
+const jiraSourcePriority: Record<JiraCandidate["source"], number> = {
+  branch: 0,
+  title: 1,
+  description: 2,
+};
 
 function collectMatches(input: string, source: JiraCandidate["source"]) {
   const matches = input.match(jiraKeyPattern) ?? [];
@@ -20,8 +25,23 @@ export function extractJiraKeys(fields: {
     ...collectMatches(fields.sourceBranch, "branch"),
   ];
 
-  return Array.from(
-    new Map(candidates.map((candidate) => [candidate.key, candidate])).values(),
+  const bestCandidates = new Map<string, JiraCandidate>();
+
+  for (const candidate of candidates) {
+    const existingCandidate = bestCandidates.get(candidate.key);
+
+    if (
+      !existingCandidate ||
+      jiraSourcePriority[candidate.source] <
+        jiraSourcePriority[existingCandidate.source]
+    ) {
+      bestCandidates.set(candidate.key, candidate);
+    }
+  }
+
+  return Array.from(bestCandidates.values()).sort(
+    (left, right) =>
+      jiraSourcePriority[left.source] - jiraSourcePriority[right.source],
   );
 }
 

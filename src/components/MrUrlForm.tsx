@@ -74,7 +74,8 @@ export function MrUrlForm({
                 {selectedMergeRequest ? (
                   <div className="mt-1 min-w-0">
                     <p className="truncate text-sm font-semibold text-white">
-                      !{selectedMergeRequest.iid} {selectedMergeRequest.title}
+                      {selectedMergeRequest.projectName} !
+                      {selectedMergeRequest.iid} {selectedMergeRequest.title}
                     </p>
                     <p className="mt-1 truncate text-xs text-slate-200">
                       {selectedMergeRequest.sourceBranch} to{" "}
@@ -124,7 +125,7 @@ export function MrUrlForm({
 
                     return (
                       <button
-                        key={mergeRequest.iid}
+                        key={mergeRequest.webUrl}
                         type="button"
                         onClick={() => {
                           onSelectOpenMr(mergeRequest.webUrl);
@@ -141,7 +142,8 @@ export function MrUrlForm({
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-white">
-                              !{mergeRequest.iid} {mergeRequest.title}
+                              {mergeRequest.projectName} !{mergeRequest.iid}{" "}
+                              {mergeRequest.title}
                             </p>
                             <p className="mt-1 truncate text-xs text-slate-200">
                               {mergeRequest.sourceBranch} to{" "}
@@ -155,7 +157,7 @@ export function MrUrlForm({
                           ) : null}
                         </div>
                         <p className="mt-2 text-xs text-slate-300">
-                          {mergeRequest.author}
+                          {mergeRequest.projectPath} · {mergeRequest.author}
                         </p>
                       </button>
                     );
@@ -163,7 +165,7 @@ export function MrUrlForm({
                 ) : (
                   <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-200">
                     No open merge requests were returned for the configured
-                    project.
+                    group or project.
                   </div>
                 )}
               </div>

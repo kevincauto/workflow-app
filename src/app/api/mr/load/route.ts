@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     let jiraIssue = null;
     const notices: string[] = [];
 
-    if (jiraCandidates.length === 1) {
+    if (jiraCandidates.length > 0) {
       try {
         jiraIssue = await resolveJiraIssue(jiraCandidates[0].key);
       } catch (error) {

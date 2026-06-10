@@ -117,6 +117,8 @@ export interface OpenMergeRequestOption {
   iid: string;
   title: string;
   webUrl: string;
+  projectPath: string;
+  projectName: string;
   sourceBranch: string;
   targetBranch: string;
   author: string;

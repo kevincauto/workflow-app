@@ -40,7 +40,7 @@ The app supports a resilient mock mode when integrations are not configured. Tha
 Required for live GitLab loading and posting:
 
 - `GITLAB_TOKEN`
-- `GITLAB_PROJECT_ID` or a merge request URL whose namespace path is API-addressable
+- `GITLAB_GROUP_ID` for a group-wide open-MR dropdown, or `GITLAB_PROJECT_ID` for a single-project dropdown; pasted merge request URLs use the project path from the URL
 - `GITLAB_API_BASE_URL` if your GitLab instance is not at `<host>/api/v4`
 
 Optional GitLab auth settings:
@@ -68,7 +68,7 @@ Required for live review generation:
 ## Routes
 
 - `POST /api/mr/load` loads merge request context and Jira key candidates
-- `GET /api/mr/load` lists open merge requests for the configured GitLab project
+- `GET /api/mr/load` lists open merge requests for the configured GitLab group or project
 - `POST /api/jira/resolve` loads a selected Jira issue
 - `POST /api/review/generate` runs bounded retrieval and review generation
 - `POST /api/comments/post` posts approved comments back to GitLab

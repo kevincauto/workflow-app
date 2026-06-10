@@ -28,6 +28,16 @@ interface GitLabChangeEntry {
   too_large?: boolean;
 }
 
+interface GitLabOpenMergeRequestEntry {
+  iid: number;
+  title: string;
+  web_url: string;
+  source_branch: string;
+  target_branch: string;
+  updated_at: string;
+  author?: { name?: string };
+}
+
 interface FileContentResult {
   content: string;
   status: "available" | "unavailable";
@@ -145,6 +155,116 @@ async function fetchGitLab<T>(
   );
 }
 
+async function fetchGitLabPages<T>(host: string, path: string): Promise<T[]> {
+  const results: T[] = [];
+  let page = 1;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    let response: Response | null = null;
+    const attemptedModes: string[] = [];
+    const pageSeparator = path.includes("?") ? "&" : "?";
+
+    for (const mode of getGitLabAuthAttempts()) {
+      attemptedModes.push(mode);
+      response = await fetch(
+        `${getGitLabApiBase(host)}${path}${pageSeparator}page=${page}`,
+        {
+          headers: getGitLabHeaders(mode),
+          cache: "no-store",
+        },
+      );
+
+      if (response.ok) {
+        results.push(...((await response.json()) as T[]));
+        hasNextPage = Boolean(response.headers.get("x-next-page"));
+        page += 1;
+        break;
+      }
+
+      if (response.status !== 401) {
+        break;
+      }
+    }
+
+    if (!response?.ok) {
+      throw new Error(
+        `GitLab request failed with status ${response?.status ?? "unknown"} after trying auth modes: ${attemptedModes.join(", ")}`,
+      );
+    }
+  }
+
+  return results;
+}
+
+function getProjectInfoFromMergeRequestUrl(webUrl: string) {
+  try {
+    const parsed = parseMergeRequestUrl(webUrl);
+
+    return {
+      projectPath: parsed.projectPath,
+      projectName: parsed.projectPath.split("/").pop() || parsed.projectPath,
+    };
+  } catch {
+    return {
+      projectPath: "Unknown project",
+      projectName: "Unknown project",
+    };
+  }
+}
+
+function toOpenMergeRequestOption(
+  mergeRequest: GitLabOpenMergeRequestEntry,
+): OpenMergeRequestOption {
+  const projectInfo = getProjectInfoFromMergeRequestUrl(mergeRequest.web_url);
+
+  return {
+    iid: String(mergeRequest.iid),
+    title: mergeRequest.title,
+    webUrl: mergeRequest.web_url,
+    projectPath: projectInfo.projectPath,
+    projectName: projectInfo.projectName,
+    sourceBranch: mergeRequest.source_branch,
+    targetBranch: mergeRequest.target_branch,
+    author: mergeRequest.author?.name || "Unknown",
+    updatedAt: mergeRequest.updated_at,
+  };
+}
+
+function isMissingOrForbiddenGitLabResource(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message.includes("status 403") || error.message.includes("status 404")
+  );
+}
+
+async function listGroupOpenMergeRequests(input: {
+  host: string;
+  groupIdOrPath: string;
+}) {
+  const mergeRequests = await fetchGitLabPages<GitLabOpenMergeRequestEntry>(
+    input.host,
+    `/groups/${encodeURIComponent(input.groupIdOrPath)}/merge_requests?state=opened&scope=all&include_subgroups=true&order_by=updated_at&sort=desc&per_page=100`,
+  );
+
+  return mergeRequests.map(toOpenMergeRequestOption);
+}
+
+async function listProjectOpenMergeRequests(input: {
+  host: string;
+  projectIdOrPath: string;
+}) {
+  const mergeRequests = await fetchGitLabPages<GitLabOpenMergeRequestEntry>(
+    input.host,
+    `/projects/${encodeURIComponent(input.projectIdOrPath)}/merge_requests?state=opened&scope=all&order_by=updated_at&sort=desc&per_page=100`,
+  );
+
+  return mergeRequests.map(toOpenMergeRequestOption);
+}
+
 async function fetchFileContent(
   host: string,
   projectIdOrPath: string,
@@ -243,7 +363,7 @@ export async function loadMergeRequest(
     };
   }
 
-  const projectIdOrPath = process.env.GITLAB_PROJECT_ID || parsed.projectPath;
+  const projectIdOrPath = parsed.projectPath;
 
   const [mergeRequest, changesResponse, versionsResponse] = await Promise.all([
     fetchGitLab<{
@@ -345,19 +465,14 @@ export async function listOpenMergeRequests(): Promise<
         iid: mockMergeRequest.iid,
         title: mockMergeRequest.title,
         webUrl: mockMergeRequest.webUrl,
+        projectPath: mockMergeRequest.projectPath,
+        projectName: mockMergeRequest.projectName,
         sourceBranch: mockMergeRequest.sourceBranch,
         targetBranch: mockMergeRequest.targetBranch,
         author: mockMergeRequest.author,
         updatedAt: new Date().toISOString(),
       },
     ];
-  }
-
-  const projectIdOrPath = process.env.GITLAB_PROJECT_ID;
-  if (!projectIdOrPath) {
-    throw new Error(
-      "GITLAB_PROJECT_ID is required to list open merge requests.",
-    );
   }
 
   const apiBase = process.env.GITLAB_API_BASE_URL;
@@ -368,30 +483,31 @@ export async function listOpenMergeRequests(): Promise<
   }
 
   const host = new URL(apiBase).origin;
-  const mergeRequests = await fetchGitLab<
-    Array<{
-      iid: number;
-      title: string;
-      web_url: string;
-      source_branch: string;
-      target_branch: string;
-      updated_at: string;
-      author?: { name?: string };
-    }>
-  >(
-    host,
-    `/projects/${encodeURIComponent(projectIdOrPath)}/merge_requests?state=opened&scope=all&order_by=updated_at&sort=desc&per_page=50`,
-  );
+  const groupIdOrPath = process.env.GITLAB_GROUP_ID;
 
-  return mergeRequests.map((mergeRequest) => ({
-    iid: String(mergeRequest.iid),
-    title: mergeRequest.title,
-    webUrl: mergeRequest.web_url,
-    sourceBranch: mergeRequest.source_branch,
-    targetBranch: mergeRequest.target_branch,
-    author: mergeRequest.author?.name || "Unknown",
-    updatedAt: mergeRequest.updated_at,
-  }));
+  if (groupIdOrPath) {
+    return listGroupOpenMergeRequests({ host, groupIdOrPath });
+  }
+
+  const projectIdOrPath = process.env.GITLAB_PROJECT_ID;
+  if (!projectIdOrPath) {
+    throw new Error(
+      "GITLAB_GROUP_ID or GITLAB_PROJECT_ID is required to list open merge requests.",
+    );
+  }
+
+  try {
+    return await listProjectOpenMergeRequests({ host, projectIdOrPath });
+  } catch (error) {
+    if (!isMissingOrForbiddenGitLabResource(error)) {
+      throw error;
+    }
+
+    return listGroupOpenMergeRequests({
+      host,
+      groupIdOrPath: projectIdOrPath,
+    });
+  }
 }
 
 async function postInlineDiscussion(input: {
