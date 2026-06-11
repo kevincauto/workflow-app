@@ -41,7 +41,7 @@ export default function RootLayout({
       <body className={`${displayFont.variable} ${monoFont.variable}`}>
         {showDemoBanner ? (
           <div className="border-b border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-4 py-3 text-center text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] sm:text-base">
-            Demo Mode: This site is not currently wired to live Fiserv data or
+            Demo Mode: This site is not currently wired to live internal data or
             the OpenAI API.
           </div>
         ) : null}
