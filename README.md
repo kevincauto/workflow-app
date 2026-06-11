@@ -1,7 +1,5 @@
 # Merge Medic AI
 
-Hack Week MVP for reviewing a single known GitLab repository with assisted merge request analysis.
-
 Merge Medic AI accepts a GitLab merge request URL or an open merge request selected from a project-scoped dropdown, loads merge request metadata and diffs, detects Jira keys, retrieves Jira issue context, generates structured review findings, lets the user edit and approve those findings, and posts approved comments back to GitLab.
 
 ## Stack
@@ -13,25 +11,92 @@ Merge Medic AI accepts a GitLab merge request URL or an open merge request selec
 
 ## Local Development
 
-1. Install dependencies:
+These steps assume you are setting up the project on a work computer for the
+first time.
+
+### 1. Install the required tools
+
+You need these installed before the app can run locally:
+
+- **Git** for cloning the repository.
+- **Node.js 20.9.0 or newer**. This project uses Next.js 16, which requires
+  Node 20.9.0+.
+- **npm**, which is included when you install Node.js.
+
+If Node.js is not already installed, install the current Node.js LTS release
+from your company software portal, your approved package manager, or
+https://nodejs.org. After installing it, confirm that your terminal can see
+Node and npm:
 
 ```bash
-npm install
+node --version
+npm --version
 ```
 
-2. Copy the environment template and fill in the values you have available:
+`node --version` should print `v20.9.0` or newer.
+
+### 2. Clone the repository
+
+Clone the project from your Git provider, then move into the project folder:
 
 ```bash
-cp .env.example .env.local
+git clone <repo-url>
+cd merge-medic-ai
 ```
 
-3. Start the app:
+If you already cloned the repository, just open a terminal in the existing
+`merge-medic-ai` folder.
+
+### 3. Install project dependencies
+
+Install the dependencies listed in `package-lock.json`:
+
+```bash
+npm ci
+```
+
+If `npm ci` fails because `package-lock.json` is out of sync, run
+`npm install` instead and check with the project owner before committing any
+lockfile changes.
+
+### 4. Create your local environment file
+
+Create a `.env.local` file in the project root. This file is ignored by Git and
+must not be committed because it contains personal tokens.
+
+Use this template and fill in your own token values:
+
+```bash
+# GitLab
+GITLAB_TOKEN=
+GITLAB_GROUP_ID=411
+GITLAB_API_BASE_URL=https://gitlab.ftscc.net/api/v4
+GITLAB_AUTH_MODE=private-token
+
+# Jira
+JIRA_BASE_URL=https://jira.ftscc.net
+JIRA_API_TOKEN=
+JIRA_AUTH_MODE=bearer
+JIRA_API_VERSION=2
+
+# AI provider
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.5
+```
+
+You may need to be connected to the company VPN or org network for the app to
+reach internal GitLab and Jira hosts.
+
+### 5. Start the app
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:4000.
+
+The app runs on port `4000` because the `dev` script is configured as
+`next dev --port 4000`.
 
 ## Environment Variables
 
@@ -62,7 +127,7 @@ Optional Jira auth settings:
 Required for live review generation:
 
 - `OPENAI_API_KEY`
-- `OPENAI_MODEL` optional, defaults to `gpt-5.4-mini`
+- `OPENAI_MODEL` recommended model: `gpt-5.5`
 - `OPENAI_BASE_URL` optional, defaults to OpenAI chat completions
 
 ## Routes
@@ -77,4 +142,3 @@ Required for live review generation:
 
 - Inline comment posting is attempted first and falls back to general MR notes when the finding cannot be safely anchored.
 - Retrieval is intentionally bounded to changed files plus a small set of direct imports, likely tests, and shared support files.
-- The repo currently includes the original build plan in `merge-medic-ai-spec.md`.
