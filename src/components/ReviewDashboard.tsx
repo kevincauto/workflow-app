@@ -139,16 +139,20 @@ export function ReviewDashboard() {
   }
 
   useEffect(() => {
-    void loadOpenMergeRequests();
+    const timeoutId = window.setTimeout(() => {
+      void loadOpenMergeRequests();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
-  useEffect(() => {
-    if (!selectedOpenMr) {
-      return;
-    }
+  function handleSelectOpenMr(value: string) {
+    setSelectedOpenMr(value);
 
-    setMrUrl(selectedOpenMr);
-  }, [selectedOpenMr]);
+    if (value) {
+      setMrUrl(value);
+    }
+  }
 
   async function handleLoadMergeRequest() {
     setError(null);
@@ -269,6 +273,11 @@ export function ReviewDashboard() {
         {
           mergeRequest,
           findings: review.findings,
+          jiraKey: (jiraIssue?.key ?? selectedJiraKey) || undefined,
+          reviewDurationMs:
+            reviewDurationSeconds !== null
+              ? reviewDurationSeconds * 1000
+              : undefined,
         },
       );
       setPostResults(data.results);
@@ -358,7 +367,7 @@ export function ReviewDashboard() {
             loading={loadingMr}
             openMergeRequests={openMergeRequests}
             selectedOpenMr={selectedOpenMr}
-            onSelectOpenMr={setSelectedOpenMr}
+            onSelectOpenMr={handleSelectOpenMr}
             onRefreshOpenMrs={loadOpenMergeRequests}
             loadingOpenMrs={loadingOpenMrs}
           />

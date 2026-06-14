@@ -137,4 +137,6 @@ export interface ReviewRequestPayload {
 export interface PostCommentsPayload {
   mergeRequest: MergeRequestContext;
   findings: ReviewFinding[];
+  jiraKey?: string;
+  reviewDurationMs?: number;
 }

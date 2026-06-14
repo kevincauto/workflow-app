@@ -6,7 +6,9 @@
     "dev": "next dev --port 4000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "metrics:summary": "node scripts/summarize-review-metrics.mjs",
+    "metrics:summary:csv": "node scripts/summarize-review-metrics.mjs --csv"
   },
   "dependencies": {
     "next": "16.2.6",
