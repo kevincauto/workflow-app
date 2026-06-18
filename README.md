@@ -78,6 +78,9 @@ JIRA_BASE_URL=https://jira.ftscc.net
 JIRA_API_TOKEN=
 JIRA_AUTH_MODE=bearer
 JIRA_API_VERSION=2
+JIRA_BOARD_ID=
+JIRA_ASSIGNEE_NAME=Kevin Cauto
+JIRA_DEVELOPER_FIELD_NAME=Developer
 
 # AI provider
 OPENAI_API_KEY=
@@ -123,6 +126,11 @@ Optional Jira auth settings:
 - `JIRA_EMAIL` optional, used for Atlassian Cloud or basic-auth Jira setups
 - `JIRA_USERNAME` optional alternative to `JIRA_EMAIL` for internal Jira basic auth
 - `JIRA_API_VERSION` optional, defaults to trying `2`, then `3`, then `latest`
+- `JIRA_BOARD_ID` optional, used by Ticket to Code to order current and future sprint work
+- `JIRA_ASSIGNEE_ACCOUNT_ID` optional, preferred when Jira supports account IDs
+- `JIRA_ASSIGNEE_NAME` optional, used by Ticket to Code as the Jira user value for Assignee or Developer JQL matching
+- `JIRA_DEVELOPER_FIELD_NAME` optional, defaults to `Developer` for Ticket to Code JQL matching
+- `JIRA_DEVELOPER_FIELD_ID` optional, used to read the Developer display value when Jira returns it as a custom field ID
 
 Required for live review generation:
 

@@ -1,5 +1,5 @@
 import { getCommentBody } from "@/lib/lineMapping";
-import { mockMergeRequest } from "@/lib/mockData";
+import { mockMergeRequest, mockMergeRequestComments } from "@/lib/mockData";
 import {
   buildRepositoryContext,
   REPOSITORY_METADATA_FILE_PATHS,
@@ -7,6 +7,7 @@ import {
 } from "@/lib/repositoryContext";
 import type {
   ChangedFile,
+  MergeRequestComment,
   MergeRequestContext,
   OpenMergeRequestOption,
   PostResult,
@@ -41,6 +42,28 @@ interface GitLabOpenMergeRequestEntry {
   target_branch: string;
   updated_at: string;
   author?: { name?: string };
+}
+
+interface GitLabDiscussionNote {
+  id: number;
+  body: string;
+  created_at: string;
+  system: boolean;
+  resolvable?: boolean;
+  resolved?: boolean;
+  author?: { name?: string; username?: string };
+  position?: {
+    new_path?: string | null;
+    old_path?: string | null;
+    new_line?: number | null;
+    old_line?: number | null;
+  } | null;
+}
+
+interface GitLabDiscussionEntry {
+  id: string;
+  individual_note?: boolean;
+  notes: GitLabDiscussionNote[];
 }
 
 interface FileContentResult {
@@ -234,6 +257,38 @@ function toOpenMergeRequestOption(
     author: mergeRequest.author?.name || "Unknown",
     updatedAt: mergeRequest.updated_at,
   };
+}
+
+function toMergeRequestComment(
+  discussion: GitLabDiscussionEntry,
+  note: GitLabDiscussionNote,
+): MergeRequestComment {
+  const filePath = note.position?.new_path || note.position?.old_path || null;
+  const lineNumber = note.position?.new_line || note.position?.old_line || null;
+
+  return {
+    id: `${discussion.id}-${note.id}`,
+    discussionId: discussion.id,
+    noteId: String(note.id),
+    body: note.body,
+    author: note.author?.name || note.author?.username || "Unknown",
+    createdAt: note.created_at,
+    filePath,
+    lineNumber,
+    resolvable: Boolean(note.resolvable),
+    resolved: Boolean(note.resolved),
+    selected: false,
+  };
+}
+
+function normalizeMergeRequestDiscussions(
+  discussions: GitLabDiscussionEntry[],
+): MergeRequestComment[] {
+  return discussions.flatMap((discussion) =>
+    discussion.notes
+      .filter((note) => !note.system && note.body.trim().length > 0)
+      .map((note) => toMergeRequestComment(discussion, note)),
+  );
 }
 
 function isMissingOrForbiddenGitLabResource(error: unknown) {
@@ -547,6 +602,22 @@ export async function listOpenMergeRequests(): Promise<
       groupIdOrPath: projectIdOrPath,
     });
   }
+}
+
+export async function loadMergeRequestComments(
+  mergeRequest: MergeRequestContext,
+): Promise<MergeRequestComment[]> {
+  if (!isGitLabConfigured() || mergeRequest.source !== "live") {
+    return mockMergeRequestComments;
+  }
+
+  const parsed = parseMergeRequestUrl(mergeRequest.webUrl);
+  const discussions = await fetchGitLabPages<GitLabDiscussionEntry>(
+    parsed.host,
+    `/projects/${encodeURIComponent(mergeRequest.projectId)}/merge_requests/${mergeRequest.iid}/discussions?per_page=100`,
+  );
+
+  return normalizeMergeRequestDiscussions(discussions);
 }
 
 async function postInlineDiscussion(input: {

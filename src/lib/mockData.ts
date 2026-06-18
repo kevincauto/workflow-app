@@ -1,4 +1,8 @@
-import type { JiraIssue, MergeRequestContext } from "@/lib/types";
+import type {
+  JiraIssue,
+  MergeRequestComment,
+  MergeRequestContext,
+} from "@/lib/types";
 
 export const mockMergeRequest: MergeRequestContext = {
   source: "mock",
@@ -166,3 +170,45 @@ export const mockJiraIssue: JiraIssue = {
     "Acceptance criteria:\n- Do not call the customer profile API when the account id route segment is missing.\n- Show a recoverable empty state instead of a broken loading screen.\n- Add regression coverage for short route paths.",
   source: "mock",
 };
+
+export const mockMergeRequestComments: MergeRequestComment[] = [
+  {
+    id: "discussion-1-note-1",
+    discussionId: "discussion-1",
+    noteId: "note-1",
+    body: "Can we avoid the `any` here and keep the customer profile state typed? This path touches account data, so the type guard would be helpful.",
+    author: "Jordan Reviewer",
+    createdAt: "2026-06-18T14:20:00.000Z",
+    filePath: "src/pages/customer/ProfilePage.tsx",
+    lineNumber: 9,
+    resolvable: true,
+    resolved: false,
+    selected: false,
+  },
+  {
+    id: "discussion-2-note-1",
+    discussionId: "discussion-2",
+    noteId: "note-1",
+    body: "The route segment lookup changed from the final segment to the previous segment. Please confirm this matches the actual route shape and add coverage for the short-route case.",
+    author: "Morgan QA",
+    createdAt: "2026-06-18T14:35:00.000Z",
+    filePath: "src/pages/customer/ProfilePage.tsx",
+    lineNumber: 10,
+    resolvable: true,
+    resolved: false,
+    selected: false,
+  },
+  {
+    id: "discussion-3-note-1",
+    discussionId: "discussion-3",
+    noteId: "note-1",
+    body: "General thought: this should probably show a recoverable empty state instead of staying on loading if the account id is missing.",
+    author: "Casey Lead",
+    createdAt: "2026-06-18T14:52:00.000Z",
+    filePath: null,
+    lineNumber: null,
+    resolvable: false,
+    resolved: false,
+    selected: false,
+  },
+];

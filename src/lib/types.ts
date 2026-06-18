@@ -17,6 +17,103 @@ export interface JiraIssue {
   source: "live" | "mock";
 }
 
+export interface JiraSprintInfo {
+  id: string;
+  name: string;
+  state: "active" | "future" | "closed" | "unknown";
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export interface JiraTicketOption extends JiraIssue {
+  status: string | null;
+  priority: string | null;
+  issueType: string | null;
+  assignee: string | null;
+  developer: string | null;
+  updatedAt: string | null;
+  sprint: JiraSprintInfo | null;
+}
+
+export interface ListAssignedJiraTicketsResponse {
+  tickets: JiraTicketOption[];
+  source: "live" | "mock";
+  assignee: string;
+  notices: string[];
+}
+
+export interface FigmaUrlParts {
+  fileKey: string;
+  nodeId: string | null;
+  fileName: string | null;
+  url: string;
+}
+
+export interface FigmaColorToken {
+  name: string;
+  value: string;
+}
+
+export interface FigmaTextNode {
+  name: string;
+  characters: string;
+  fontFamily: string | null;
+  fontSize: number | null;
+  fontWeight: number | null;
+  lineHeight: string | null;
+}
+
+export interface FigmaLayerNode {
+  id: string;
+  name: string;
+  type: string;
+  children: FigmaLayerNode[];
+}
+
+export interface NormalizedFigmaContext {
+  source: "live" | "mock";
+  url: string;
+  fileKey: string;
+  nodeId: string | null;
+  fileName: string;
+  selectedNodeName: string;
+  selectedNodeType: string;
+  previewImageUrl: string | null;
+  dimensions: {
+    width: number | null;
+    height: number | null;
+  };
+  layout: {
+    mode: string | null;
+    primaryAxisSizingMode: string | null;
+    counterAxisSizingMode: string | null;
+    itemSpacing: number | null;
+    padding: {
+      top: number | null;
+      right: number | null;
+      bottom: number | null;
+      left: number | null;
+    };
+  };
+  colors: FigmaColorToken[];
+  text: FigmaTextNode[];
+  radii: number[];
+  hierarchy: FigmaLayerNode[];
+  implementationNotes: string[];
+  ambiguityNotes: string[];
+}
+
+export interface FigmaExtractResponse {
+  figma: NormalizedFigmaContext;
+}
+
+export interface TicketToCodePackageInput {
+  generatedAt: string;
+  ticket: JiraTicketOption;
+  editedDescription: string;
+  figma: NormalizedFigmaContext | null;
+}
+
 export interface JiraCandidate {
   key: string;
   source: "title" | "description" | "branch";
@@ -147,6 +244,20 @@ export interface PostResult {
   detail: string;
 }
 
+export interface MergeRequestComment {
+  id: string;
+  discussionId: string;
+  noteId: string;
+  body: string;
+  author: string;
+  createdAt: string;
+  filePath: string | null;
+  lineNumber: number | null;
+  resolvable: boolean;
+  resolved: boolean;
+  selected: boolean;
+}
+
 export interface LoadMrResponse {
   mergeRequest: MergeRequestContext;
   jiraCandidates: JiraCandidate[];
@@ -168,6 +279,16 @@ export interface OpenMergeRequestOption {
 
 export interface ListOpenMergeRequestsResponse {
   mergeRequests: OpenMergeRequestOption[];
+}
+
+export interface LoadMrCommentsResponse {
+  comments: MergeRequestComment[];
+}
+
+export interface PeerReviewFixesPackageInput {
+  generatedAt: string;
+  mergeRequest: MergeRequestContext;
+  comments: MergeRequestComment[];
 }
 
 export interface ReviewRequestPayload {
