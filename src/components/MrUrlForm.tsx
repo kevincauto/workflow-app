@@ -28,6 +28,7 @@ export function MrUrlForm({
   loadingOpenMrs,
 }: MrUrlFormProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [mergeRequestFilter, setMergeRequestFilter] = useState("");
 
   const selectedMergeRequest = useMemo(
     () =>
@@ -36,6 +37,20 @@ export function MrUrlForm({
       ) ?? null,
     [openMergeRequests, selectedOpenMr],
   );
+
+  const filteredMergeRequests = useMemo(() => {
+    const normalizedFilter = mergeRequestFilter.trim().toLowerCase();
+
+    if (!normalizedFilter) {
+      return openMergeRequests;
+    }
+
+    return openMergeRequests.filter((mergeRequest) => {
+      const searchableText = `${mergeRequest.title} ${mergeRequest.author}`;
+
+      return searchableText.toLowerCase().includes(normalizedFilter);
+    });
+  }, [mergeRequestFilter, openMergeRequests]);
 
   return (
     <div className="space-y-4">
@@ -115,12 +130,35 @@ export function MrUrlForm({
 
           {isPickerOpen ? (
             <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-30 overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(180deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] shadow-[0_24px_90px_rgba(2,6,23,0.65)] backdrop-blur-xl">
-              <div className="border-b border-white/8 px-4 py-3 text-xs uppercase tracking-[0.18em] text-orange-300">
-                {openMergeRequests.length} open merge requests
+              <div className="space-y-3 border-b border-white/8 px-4 py-3">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
+                    {filteredMergeRequests.length} of {openMergeRequests.length}{" "}
+                    open merge requests
+                  </p>
+                  {mergeRequestFilter ? (
+                    <button
+                      type="button"
+                      onClick={() => setMergeRequestFilter("")}
+                      className="text-left text-xs font-semibold text-cyan-100 transition hover:text-white sm:text-right"
+                    >
+                      Clear filter
+                    </button>
+                  ) : null}
+                </div>
+                <input
+                  value={mergeRequestFilter}
+                  onChange={(event) =>
+                    setMergeRequestFilter(event.target.value)
+                  }
+                  placeholder="Filter by title or author"
+                  className="min-h-11 w-full rounded-2xl border border-white/15 bg-slate-950/60 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                  autoFocus
+                />
               </div>
               <div className="max-h-80 overflow-y-auto p-2">
-                {openMergeRequests.length > 0 ? (
-                  openMergeRequests.map((mergeRequest) => {
+                {filteredMergeRequests.length > 0 ? (
+                  filteredMergeRequests.map((mergeRequest) => {
                     const isSelected = mergeRequest.webUrl === selectedOpenMr;
 
                     return (
@@ -164,8 +202,9 @@ export function MrUrlForm({
                   })
                 ) : (
                   <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-200">
-                    No open merge requests were returned for the configured
-                    group or project.
+                    {openMergeRequests.length === 0
+                      ? "No open merge requests were returned for the configured group or project."
+                      : "No open merge requests match that title or author filter."}
                   </div>
                 )}
               </div>

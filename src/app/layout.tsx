@@ -15,9 +15,9 @@ const monoFont = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Merge Medic AI",
+  title: "Workflow Apps",
   description:
-    "Merge Medic AI is a single-user dashboard for loading GitLab merge requests, enriching them with Jira context, generating review comments, and posting approved feedback back to GitLab.",
+    "A compact dashboard for internal workflow apps, including the Merge Medic AI code review workspace.",
 };
 
 function isDemoMode() {

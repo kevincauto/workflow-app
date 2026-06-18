@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import type { JiraCandidate, JiraIssue } from "@/lib/types";
 
 interface JiraPanelProps {
@@ -5,6 +7,7 @@ interface JiraPanelProps {
   jiraIssue: JiraIssue | null;
   selectedKey: string;
   onSelectKey: (key: string) => void;
+  onDescriptionChange: (description: string) => void;
   onResolve: () => void;
   loading: boolean;
 }
@@ -14,9 +17,23 @@ export function JiraPanel({
   jiraIssue,
   selectedKey,
   onSelectKey,
+  onDescriptionChange,
   onResolve,
   loading,
 }: JiraPanelProps) {
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  function resizeDescriptionTextarea(textarea: HTMLTextAreaElement) {
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+  useEffect(() => {
+    if (descriptionTextareaRef.current) {
+      resizeDescriptionTextarea(descriptionTextareaRef.current);
+    }
+  }, [jiraIssue?.description]);
+
   return (
     <div className="space-y-4">
       {candidates.length > 1 ? (
@@ -51,8 +68,23 @@ export function JiraPanel({
           <h3 className="mt-2 text-base font-semibold text-slate-50">
             {jiraIssue.summary}
           </h3>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-100">
-            {jiraIssue.description}
+          <label className="mt-4 block text-xs uppercase tracking-[0.18em] text-orange-300">
+            Editable Ticket Description
+          </label>
+          <textarea
+            ref={descriptionTextareaRef}
+            value={jiraIssue.description}
+            onChange={(event) => {
+              resizeDescriptionTextarea(event.currentTarget);
+              onDescriptionChange(event.currentTarget.value);
+            }}
+            rows={1}
+            className="mt-2 min-h-48 w-full resize-y overflow-hidden rounded-2xl border border-white/15 bg-slate-950/60 px-4 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            placeholder="Add Jira context, acceptance criteria, or meeting notes for the AI review."
+          />
+          <p className="mt-2 text-xs leading-5 text-slate-300">
+            Edits here are included in the JSON payload sent to the AI review
+            endpoint.
           </p>
         </div>
       ) : (

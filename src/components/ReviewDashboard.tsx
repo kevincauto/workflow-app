@@ -72,8 +72,8 @@ function SeverityRubricTooltip() {
 
         <p className="mt-3 font-semibold text-orange-300">Low</p>
         <p className="mt-1 text-slate-200">
-          Non-blocking maintainability or observability improvements, minor
-          edge cases, and test gaps by default.
+          Non-blocking maintainability or observability improvements, minor edge
+          cases, and test gaps by default.
         </p>
       </div>
     </details>
@@ -206,6 +206,12 @@ export function ReviewDashboard() {
     }
   }
 
+  function handleJiraDescriptionChange(description: string) {
+    setJiraIssue((current) =>
+      current ? { ...current, description } : current,
+    );
+  }
+
   async function handleGenerateReview() {
     if (!mergeRequest) {
       return;
@@ -324,7 +330,10 @@ export function ReviewDashboard() {
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const safeProject = mergeRequest.projectName.replace(/[^a-z0-9-_]/gi, "-");
+      const safeProject = mergeRequest.projectName.replace(
+        /[^a-z0-9-_]/gi,
+        "-",
+      );
 
       link.href = url;
       link.download = `ai-review-payload-${safeProject}-mr-${mergeRequest.iid}.json`;
@@ -353,11 +362,7 @@ export function ReviewDashboard() {
 
         <SectionCard
           title="Select a Merge Request or Paste a URL"
-          eyebrow={
-            <MedicalEyebrow>
-              Select A Patient 🤒🤕😷
-            </MedicalEyebrow>
-          }
+          eyebrow={<MedicalEyebrow>Select A Patient 🤒🤕😷</MedicalEyebrow>}
           className="relative z-40"
         >
           <MrUrlForm
@@ -393,11 +398,7 @@ export function ReviewDashboard() {
         {mergeRequest ? (
           <SectionCard
             title="Merge Request Summary"
-            eyebrow={
-              <MedicalEyebrow>
-                Gather Medical History 🚑
-              </MedicalEyebrow>
-            }
+            eyebrow={<MedicalEyebrow>Gather Medical History 🚑</MedicalEyebrow>}
           >
             <MrDetailsCard mergeRequest={mergeRequest} />
           </SectionCard>
@@ -412,6 +413,7 @@ export function ReviewDashboard() {
             jiraIssue={jiraIssue}
             selectedKey={selectedJiraKey}
             onSelectKey={setSelectedJiraKey}
+            onDescriptionChange={handleJiraDescriptionChange}
             onResolve={handleResolveJira}
             loading={loadingJira}
           />
@@ -441,8 +443,8 @@ export function ReviewDashboard() {
                       {formatReviewDuration(reviewDurationSeconds)}
                     </p>
                   ) : null}
-                  {/* removing but not deleting the download button for now */}
-                  {/* <button
+
+                  <button
                     type="button"
                     onClick={handleDownloadAiPayload}
                     disabled={downloadingPayload}
@@ -452,7 +454,7 @@ export function ReviewDashboard() {
                     {downloadingPayload
                       ? "Preparing Payload..."
                       : "Download AI Payload"}
-                  </button> */}
+                  </button>
                 </div>
               }
             >
