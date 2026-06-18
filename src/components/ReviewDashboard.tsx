@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { strToU8, zipSync } from "fflate";
 
 import { FindingsList } from "@/components/FindingsList";
 import { HeroLogo } from "@/components/HeroLogo";
@@ -11,6 +12,12 @@ import { PostResultsPanel } from "@/components/PostResultsPanel";
 import { ReviewControls } from "@/components/ReviewControls";
 import { ReviewSummary } from "@/components/ReviewSummary";
 import { SectionCard } from "@/components/SectionCard";
+import {
+  buildReviewPackageManifest,
+  buildReviewPackagePatch,
+  buildReviewPackageSummary,
+  getReviewPackageFolderName,
+} from "@/lib/reviewPackage";
 import type {
   JiraCandidate,
   JiraIssue,
@@ -247,6 +254,45 @@ export function ReviewDashboard() {
     }
   }
 
+  function handlePackageDataForCopilot() {
+    if (!mergeRequest) {
+      return;
+    }
+
+    setError(null);
+
+    const packageInput = {
+      generatedAt: new Date().toISOString(),
+      mergeRequest,
+      jiraIssue,
+    };
+    const folderName = getReviewPackageFolderName(mergeRequest);
+    const zipData = zipSync({
+      [`${folderName}/manifest.json`]: strToU8(
+        JSON.stringify(buildReviewPackageManifest(packageInput), null, 2),
+      ),
+      [`${folderName}/changes.patch`]: strToU8(
+        buildReviewPackagePatch(packageInput),
+      ),
+      [`${folderName}/summary.md`]: strToU8(
+        buildReviewPackageSummary(packageInput),
+      ),
+    });
+
+    const blob = new Blob([zipData], {
+      type: "application/zip",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${folderName}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function updateFinding(
     id: string,
     updater: (finding: ReviewFinding) => ReviewFinding,
@@ -425,6 +471,7 @@ export function ReviewDashboard() {
         >
           <ReviewControls
             onGenerate={handleGenerateReview}
+            onPackageData={handlePackageDataForCopilot}
             loading={loadingReview}
             canGenerate={Boolean(mergeRequest)}
           />
