@@ -13,6 +13,56 @@ export const mockMergeRequest: MergeRequestContext = {
   author: "Taylor Dev",
   sourceBranch: "feature/CP2-1936-profile-guard",
   targetBranch: "main",
+  repositoryContext: {
+    packageManager: "yarn@4.9.1",
+    packageManagerName: "yarn",
+    detectedFiles: {
+      packageJson: true,
+      yarnLock: true,
+      packageLock: false,
+      pnpmLock: false,
+      yarnrc: true,
+      tsconfig: true,
+      vitestConfig: true,
+      jestConfig: false,
+      playwrightConfig: false,
+    },
+    packageJson: {
+      packageManager: "yarn@4.9.1",
+      scripts: {
+        lint: "eslint .",
+        typecheck: "tsc --noEmit -p .",
+        test: "vitest run",
+        build: "vite build",
+      },
+      dependencyNames: ["@vitejs/plugin-react", "vite"],
+      devDependencyNames: ["typescript", "vitest"],
+    },
+    validationCommands: [
+      {
+        name: "lint",
+        command: "yarn lint",
+        result: "notRun",
+      },
+      {
+        name: "typecheck",
+        command: "yarn typecheck",
+        result: "notRun",
+      },
+      {
+        name: "test",
+        command: "yarn test",
+        result: "notRun",
+      },
+      {
+        name: "build",
+        command: "yarn build",
+        result: "notRun",
+      },
+    ],
+    suggestedFocusedCommands: [],
+    notes: [],
+  },
   diffRefs: {
     baseSha: "1111111111111111111111111111111111111111",
     headSha: "2222222222222222222222222222222222222222",

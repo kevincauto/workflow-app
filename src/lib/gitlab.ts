@@ -1,5 +1,10 @@
 import { getCommentBody } from "@/lib/lineMapping";
 import { mockMergeRequest } from "@/lib/mockData";
+import {
+  buildRepositoryContext,
+  REPOSITORY_METADATA_FILE_PATHS,
+  type RepositoryMetadataFiles,
+} from "@/lib/repositoryContext";
 import type {
   ChangedFile,
   MergeRequestContext,
@@ -351,6 +356,30 @@ async function loadChangedFiles(input: {
   );
 }
 
+async function loadRepositoryMetadataFiles(input: {
+  host: string;
+  projectIdOrPath: string;
+  sourceBranch: string;
+}): Promise<RepositoryMetadataFiles> {
+  const entries = await Promise.all(
+    REPOSITORY_METADATA_FILE_PATHS.map(async (filePath) => {
+      const fileContent = await fetchFileContent(
+        input.host,
+        input.projectIdOrPath,
+        filePath,
+        input.sourceBranch,
+      );
+
+      return [
+        filePath,
+        fileContent.status === "available" ? fileContent.content : null,
+      ] as const;
+    }),
+  );
+
+  return Object.fromEntries(entries) as RepositoryMetadataFiles;
+}
+
 export async function loadMergeRequest(
   url: string,
 ): Promise<MergeRequestContext> {
@@ -425,6 +454,15 @@ export async function loadMergeRequest(
     sourceBranch: mergeRequest.source_branch,
     changes: effectiveChanges,
   });
+  const repositoryMetadataFiles = await loadRepositoryMetadataFiles({
+    host: parsed.host,
+    projectIdOrPath,
+    sourceBranch: mergeRequest.source_branch,
+  });
+  const repositoryContext = buildRepositoryContext({
+    metadataFiles: repositoryMetadataFiles,
+    changedFiles,
+  });
 
   return {
     source: "live",
@@ -439,6 +477,7 @@ export async function loadMergeRequest(
     sourceBranch: mergeRequest.source_branch,
     targetBranch: mergeRequest.target_branch,
     changedFiles,
+    repositoryContext,
     diffRefs: {
       baseSha:
         mergeRequest.diff_refs?.base_sha ||

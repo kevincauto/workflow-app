@@ -74,6 +74,7 @@ function countDiffLines(files: ChangedFile[]) {
 export function buildReviewPackageManifest(input: ReviewPackageInput) {
   const { mergeRequest, jiraIssue } = input;
   const diffStats = countDiffLines(mergeRequest.changedFiles);
+  const repositoryContext = mergeRequest.repositoryContext;
 
   return {
     packageVersion: 1,
@@ -124,23 +125,36 @@ export function buildReviewPackageManifest(input: ReviewPackageInput) {
       additions: diffStats.additions,
       deletions: diffStats.deletions,
     },
+    repositoryContext: repositoryContext
+      ? {
+          packageManager: repositoryContext.packageManager,
+          packageManagerName: repositoryContext.packageManagerName,
+          detectedFiles: repositoryContext.detectedFiles,
+          packageJson: repositoryContext.packageJson
+            ? {
+                packageManager: repositoryContext.packageJson.packageManager,
+                scripts: repositoryContext.packageJson.scripts,
+              }
+            : null,
+          validationCommands: repositoryContext.validationCommands,
+          suggestedFocusedCommands: repositoryContext.suggestedFocusedCommands,
+          notes: repositoryContext.notes,
+        }
+      : {
+          packageManager: null,
+          packageManagerName: null,
+          detectedFiles: null,
+          packageJson: null,
+          validationCommands: [],
+          suggestedFocusedCommands: [],
+          notes: ["Repository metadata was not available from GitLab."],
+        },
     knownConstraints: [
       "Full file contents are intentionally excluded from this package.",
       "changes.patch contains GitLab-provided unified diff hunks and may omit context if GitLab marks a diff collapsed or too large.",
       "summary.md contains Jira and GitLab descriptions as available at package generation time, including user edits made in the Jira Context section.",
       "When the source branch is checked out locally, prefer inspecting live files for complete implementation context.",
-    ],
-    validationCommands: [
-      {
-        name: "lint",
-        command: "npm run lint",
-        result: "notRun",
-      },
-      {
-        name: "build",
-        command: "npm run build",
-        result: "notRun",
-      },
+      "Validation and focused command suggestions live under repositoryContext as the canonical source of truth.",
     ],
   };
 }
@@ -153,8 +167,28 @@ function gitPathPostfix(path: string) {
   return path === "/dev/null" ? path : `b/${path}`;
 }
 
-function diffLooksLikeRawGitPatch(diff: string) {
-  return /^diff --git /m.test(diff) || /^---\s+\S+/m.test(diff);
+function hasDiffGitHeader(diff: string) {
+  return diff.startsWith("diff --git ");
+}
+
+function hasFileHeader(diff: string) {
+  return diff.startsWith("--- ");
+}
+
+function getStandardDiffGitLine(file: ChangedFile) {
+  return `diff --git ${gitPathPrefix(file.oldPath)} ${gitPathPostfix(file.newPath)}`;
+}
+
+function getModeLine(file: ChangedFile) {
+  if (file.isNew) {
+    return "new file mode 100644";
+  }
+
+  if (file.isDeleted) {
+    return "deleted file mode 100644";
+  }
+
+  return null;
 }
 
 function normalizeDiffGitLine(diff: string, file: ChangedFile) {
@@ -165,7 +199,7 @@ function normalizeDiffGitLine(diff: string, file: ChangedFile) {
     return diff;
   }
 
-  const expectedLine = `diff --git ${gitPathPrefix(file.oldPath)} ${gitPathPostfix(file.newPath)}`;
+  const expectedLine = getStandardDiffGitLine(file);
 
   if (firstLine.includes("/dev/null") && (file.isNew || file.isDeleted)) {
     lines[0] = expectedLine;
@@ -201,21 +235,26 @@ function removeRepeatedFileHeaders(diff: string) {
 }
 
 function normalizeRawPatchBlock(diff: string, file: ChangedFile) {
-  return removeRepeatedFileHeaders(normalizeDiffGitLine(diff, file));
+  if (hasDiffGitHeader(diff)) {
+    return removeRepeatedFileHeaders(normalizeDiffGitLine(diff, file));
+  }
+
+  if (hasFileHeader(diff)) {
+    return [getStandardDiffGitLine(file), getModeLine(file), diff]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return diff;
 }
 
 function buildHunkOnlyPatch(file: ChangedFile) {
   const oldPath = file.isNew ? "/dev/null" : file.oldPath;
   const newPath = file.isDeleted ? "/dev/null" : file.newPath;
-  const modeLine = file.isNew
-    ? "new file mode 100644"
-    : file.isDeleted
-      ? "deleted file mode 100644"
-      : null;
 
   return [
-    `diff --git ${gitPathPrefix(file.oldPath)} ${gitPathPostfix(file.newPath)}`,
-    modeLine,
+    getStandardDiffGitLine(file),
+    getModeLine(file),
     `--- ${gitPathPrefix(oldPath)}`,
     `+++ ${gitPathPostfix(newPath)}`,
     file.diff.trimEnd(),
@@ -239,7 +278,7 @@ function buildFilePatch(file: ChangedFile) {
     return buildUnavailableDiffMarker(file);
   }
 
-  if (diffLooksLikeRawGitPatch(diff)) {
+  if (hasDiffGitHeader(diff) || hasFileHeader(diff)) {
     return normalizeRawPatchBlock(diff, file);
   }
 
@@ -255,6 +294,28 @@ export function buildReviewPackagePatch(input: ReviewPackageInput) {
 
 function markdownText(value: string | null | undefined, fallback: string) {
   return value?.trim() ? value.trim() : fallback;
+}
+
+function buildReviewerBrief(input: ReviewPackageInput) {
+  const { mergeRequest, jiraIssue } = input;
+
+  if (!jiraIssue) {
+    return [
+      "## Reviewer Brief",
+      "",
+      `Review merge request !${mergeRequest.iid} against the GitLab description and changed files. No Jira issue context was loaded for this package.`,
+      "",
+    ].join("\n");
+  }
+
+  return [
+    "## Reviewer Brief",
+    "",
+    `Review merge request !${mergeRequest.iid} for Jira issue ${jiraIssue.key}: ${jiraIssue.summary}`,
+    "",
+    "Use the edited Jira description below as the requirements source of truth, and flag any implementation, test, or behavior mismatch against it.",
+    "",
+  ].join("\n");
 }
 
 export function buildReviewPackageSummary(input: ReviewPackageInput) {
@@ -279,6 +340,7 @@ export function buildReviewPackageSummary(input: ReviewPackageInput) {
       "No GitLab merge request description provided.",
     ),
     "",
+    buildReviewerBrief(input),
     "## Jira Context",
     "",
     jiraIssue

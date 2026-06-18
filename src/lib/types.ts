@@ -44,6 +44,46 @@ export interface ChangedFile {
   diffTooLarge: boolean;
 }
 
+export type ValidationCommandResult =
+  | "notRun"
+  | "passed"
+  | "failed"
+  | "unknown";
+
+export interface ValidationCommand {
+  name: string;
+  command: string;
+  result: ValidationCommandResult;
+  confidence?: "high" | "medium" | "low";
+  summary?: string;
+  reason?: string;
+}
+
+export interface RepositoryContext {
+  packageManager: string | null;
+  packageManagerName: "yarn" | "pnpm" | "npm" | null;
+  detectedFiles: {
+    packageJson: boolean;
+    yarnLock: boolean;
+    packageLock: boolean;
+    pnpmLock: boolean;
+    yarnrc: boolean;
+    tsconfig: boolean;
+    vitestConfig: boolean;
+    jestConfig: boolean;
+    playwrightConfig: boolean;
+  };
+  packageJson: {
+    packageManager: string | null;
+    scripts: Record<string, string>;
+    dependencyNames: string[];
+    devDependencyNames: string[];
+  } | null;
+  validationCommands: ValidationCommand[];
+  suggestedFocusedCommands: ValidationCommand[];
+  notes: string[];
+}
+
 export interface MergeRequestContext {
   source: "live" | "mock";
   projectId: string;
@@ -58,6 +98,7 @@ export interface MergeRequestContext {
   targetBranch: string;
   changedFiles: ChangedFile[];
   diffRefs: GitLabDiffRefs;
+  repositoryContext?: RepositoryContext;
 }
 
 export interface RelatedFile {
