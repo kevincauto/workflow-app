@@ -129,7 +129,7 @@ export function MrUrlForm({
           </button>
 
           {isPickerOpen ? (
-            <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-30 overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(180deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] shadow-[0_24px_90px_rgba(2,6,23,0.65)] backdrop-blur-xl">
+            <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-50 overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(180deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] shadow-[0_24px_90px_rgba(2,6,23,0.65)] backdrop-blur-xl">
               <div className="space-y-3 border-b border-white/8 px-4 py-3">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
@@ -216,7 +216,7 @@ export function MrUrlForm({
               type="button"
               aria-label="Close merge request picker"
               onClick={() => setIsPickerOpen(false)}
-              className="fixed inset-0 z-20 cursor-default"
+              className="fixed inset-0 z-40 cursor-default"
             />
           ) : null}
         </div>

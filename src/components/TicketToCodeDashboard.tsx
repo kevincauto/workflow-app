@@ -219,6 +219,7 @@ export function TicketToCodeDashboard() {
         <SectionCard
           title="Select Assigned Or Developer Ticket"
           eyebrow="Jira Source"
+          className="relative z-40"
         >
           <TicketSelector
             tickets={tickets}

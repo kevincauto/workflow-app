@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { HomeJiraTickets } from "@/components/HomeJiraTickets";
+
 type WorkflowApp =
   | {
       name: string;
@@ -168,6 +170,8 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        <HomeJiraTickets />
       </div>
     </main>
   );

@@ -224,6 +224,14 @@ interface JiraSprintPagePayload {
   values?: JiraSprintPayload[];
 }
 
+interface JiraFieldPayload {
+  id?: string;
+  name?: string;
+  schema?: {
+    custom?: string;
+  };
+}
+
 function normalizeSprint(payload: JiraSprintPayload): JiraSprintInfo {
   const state = payload.state?.toLowerCase();
 
@@ -278,6 +286,39 @@ async function listBoardSprints() {
   return { sprints, notices };
 }
 
+async function listJiraSprintFieldIds() {
+  const configuredSprintFieldId = process.env.JIRA_SPRINT_FIELD_ID?.trim();
+  const sprintFieldIds = configuredSprintFieldId
+    ? [configuredSprintFieldId]
+    : [];
+
+  for (const version of getJiraApiVersions()) {
+    try {
+      const fields = await fetchJiraJson<JiraFieldPayload[]>(
+        `/rest/api/${version}/field`,
+      );
+      const discoveredSprintFieldIds = fields
+        .filter((field) => {
+          const normalizedName = field.name?.trim().toLowerCase();
+          return (
+            normalizedName === "sprint" ||
+            field.schema?.custom === "com.pyxis.greenhopper.jira:gh-sprint"
+          );
+        })
+        .map((field) => field.id)
+        .filter((id): id is string => Boolean(id));
+
+      sprintFieldIds.push(...discoveredSprintFieldIds);
+      break;
+    } catch {
+      // Fall back to configured/default sprint field IDs below.
+    }
+  }
+
+  sprintFieldIds.push("customfield_10020");
+  return Array.from(new Set(sprintFieldIds));
+}
+
 type JiraFieldMap = Record<string, unknown>;
 
 interface JiraSearchIssuePayload {
@@ -330,24 +371,18 @@ function parseSprintString(value: string): JiraSprintInfo | null {
   };
 }
 
-function normalizeIssueSprint(value: unknown): JiraSprintInfo | null {
+function normalizeIssueSprints(value: unknown): JiraSprintInfo[] {
   if (Array.isArray(value)) {
-    for (const item of value) {
-      const sprint = normalizeIssueSprint(item);
-      if (sprint) {
-        return sprint;
-      }
-    }
-
-    return null;
+    return value.flatMap(normalizeIssueSprints);
   }
 
   if (typeof value === "string") {
-    return parseSprintString(value);
+    const sprint = parseSprintString(value);
+    return sprint ? [sprint] : [];
   }
 
   if (!value || typeof value !== "object") {
-    return null;
+    return [];
   }
 
   const sprint = value as {
@@ -366,36 +401,61 @@ function normalizeIssueSprint(value: unknown): JiraSprintInfo | null {
     typeof sprint.state === "string" ? sprint.state.toLowerCase() : null;
 
   if (!id && !name) {
-    return null;
+    return [];
   }
 
-  return {
-    id: id ?? name ?? "unknown-sprint",
-    name: name ?? id ?? "Unknown sprint",
-    state:
-      state === "active" || state === "future" || state === "closed"
-        ? state
-        : "unknown",
-    startDate: typeof sprint.startDate === "string" ? sprint.startDate : null,
-    endDate: typeof sprint.endDate === "string" ? sprint.endDate : null,
-  };
+  return [
+    {
+      id: id ?? name ?? "unknown-sprint",
+      name: name ?? id ?? "Unknown sprint",
+      state:
+        state === "active" || state === "future" || state === "closed"
+          ? state
+          : "unknown",
+      startDate: typeof sprint.startDate === "string" ? sprint.startDate : null,
+      endDate: typeof sprint.endDate === "string" ? sprint.endDate : null,
+    },
+  ];
 }
 
 function getIssueSprint(
   fields: JiraFieldMap,
   sprintById: Map<string, JiraSprintInfo>,
+  sprintFieldIds: string[],
 ) {
-  const sprintFieldId = process.env.JIRA_SPRINT_FIELD_ID || "customfield_10020";
-  const configuredSprint = normalizeIssueSprint(fields[sprintFieldId]);
+  const configuredSprints = sprintFieldIds.flatMap((fieldId) =>
+    normalizeIssueSprints(fields[fieldId]),
+  );
+  const knownConfiguredSprints = configuredSprints.map(
+    (sprint) => sprintById.get(sprint.id) ?? sprint,
+  );
 
-  if (configuredSprint) {
-    return sprintById.get(configuredSprint.id) ?? configuredSprint;
+  const activeConfiguredSprint = knownConfiguredSprints.find(
+    (sprint) => sprint.state === "active",
+  );
+
+  if (activeConfiguredSprint) {
+    return activeConfiguredSprint;
+  }
+
+  const futureConfiguredSprint = knownConfiguredSprints.find(
+    (sprint) => sprint.state === "future",
+  );
+
+  if (futureConfiguredSprint) {
+    return futureConfiguredSprint;
+  }
+
+  if (knownConfiguredSprints.length > 0) {
+    return knownConfiguredSprints[0];
   }
 
   for (const value of Object.values(fields)) {
-    const sprint = normalizeIssueSprint(value);
+    const sprint = normalizeIssueSprints(value).find((candidate) =>
+      sprintById.has(candidate.id),
+    );
 
-    if (sprint && sprintById.has(sprint.id)) {
+    if (sprint) {
       return sprintById.get(sprint.id) ?? sprint;
     }
   }
@@ -406,6 +466,7 @@ function getIssueSprint(
 function mapSearchIssue(
   issue: JiraSearchIssuePayload,
   sprintById: Map<string, JiraSprintInfo>,
+  sprintFieldIds: string[],
 ): JiraTicketOption {
   const fields = issue.fields ?? {};
   const developerFieldName = getDeveloperJqlField();
@@ -427,7 +488,7 @@ function mapSearchIssue(
     assignee: getFieldString(fields.assignee),
     developer,
     updatedAt: typeof fields.updated === "string" ? fields.updated : null,
-    sprint: getIssueSprint(fields, sprintById),
+    sprint: getIssueSprint(fields, sprintById, sprintFieldIds),
   };
 }
 
@@ -447,6 +508,15 @@ function getSprintSortValue(sprint: JiraSprintInfo | null) {
   return 2;
 }
 
+function getSprintNameSortValue(sprint: JiraSprintInfo | null) {
+  if (!sprint) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const sprintNumber = sprint.name.match(/\d+(?!.*\d)/)?.[0];
+  return sprintNumber ? Number(sprintNumber) : Number.POSITIVE_INFINITY;
+}
+
 function sortTicketsBySprint(left: JiraTicketOption, right: JiraTicketOption) {
   const sprintSort =
     getSprintSortValue(left.sprint) - getSprintSortValue(right.sprint);
@@ -462,6 +532,20 @@ function sortTicketsBySprint(left: JiraTicketOption, right: JiraTicketOption) {
     return leftStart.localeCompare(rightStart);
   }
 
+  const sprintNameSort =
+    getSprintNameSortValue(left.sprint) - getSprintNameSortValue(right.sprint);
+
+  if (sprintNameSort !== 0) {
+    return sprintNameSort;
+  }
+
+  const leftSprintName = left.sprint?.name ?? "";
+  const rightSprintName = right.sprint?.name ?? "";
+
+  if (leftSprintName !== rightSprintName) {
+    return leftSprintName.localeCompare(rightSprintName);
+  }
+
   return (right.updatedAt ?? "").localeCompare(left.updatedAt ?? "");
 }
 
@@ -472,6 +556,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   const { jqlValue, displayName } = getConfiguredAssignee();
   const { sprints, notices } = await listBoardSprints();
+  const sprintFieldIds = await listJiraSprintFieldIds();
   const sprintById = new Map(sprints.map((sprint) => [sprint.id, sprint]));
   const sprintClause = sprints.length
     ? ` AND sprint in (${sprints.map((sprint) => sprint.id).join(",")})`
@@ -491,7 +576,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
     "assignee",
     getDeveloperFieldId() ?? getDeveloperJqlField(),
     "updated",
-    process.env.JIRA_SPRINT_FIELD_ID || "customfield_10020",
+    ...sprintFieldIds,
   ];
   let response: JiraSearchPayload | null = null;
   let lastError: Error | null = null;
@@ -522,7 +607,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   return {
     tickets: (response.issues ?? [])
-      .map((issue) => mapSearchIssue(issue, sprintById))
+      .map((issue) => mapSearchIssue(issue, sprintById, sprintFieldIds))
       .sort(sortTicketsBySprint),
     source: "live",
     assignee: displayName,
