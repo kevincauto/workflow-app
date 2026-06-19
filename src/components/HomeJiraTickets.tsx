@@ -85,6 +85,7 @@ function getTicketDetail(ticket: JiraTicketOption) {
   const details = [
     ticket.issueType,
     ticket.priority,
+    ticket.estimatePoints !== null ? `${ticket.estimatePoints} pts` : null,
     ticket.sprint?.name,
     ticket.assignee ? `Assignee: ${ticket.assignee}` : null,
   ].filter(Boolean);
@@ -103,6 +104,14 @@ export function HomeJiraTickets() {
     [tickets],
   );
   const backlogTickets = tickets.length - currentSprintTickets;
+  const estimatedPoints = useMemo(
+    () =>
+      tickets.reduce(
+        (total, ticket) => total + (ticket.estimatePoints ?? 0),
+        0,
+      ),
+    [tickets],
+  );
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
@@ -156,7 +165,7 @@ export function HomeJiraTickets() {
       </div>
 
       <div className="rounded-lg border border-white/12 bg-slate-950/58 shadow-[0_22px_70px_rgba(2,6,23,0.34),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
-        <div className="grid gap-3 border-b border-white/10 p-4 sm:grid-cols-3">
+        <div className="grid gap-3 border-b border-white/10 p-4 sm:grid-cols-4">
           <div>
             <p className="text-2xl font-semibold text-white">
               {loading ? "-" : tickets.length}
@@ -179,6 +188,14 @@ export function HomeJiraTickets() {
             </p>
             <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
               Backlog
+            </p>
+          </div>
+          <div>
+            <p className="text-2xl font-semibold text-white">
+              {loading ? "-" : estimatedPoints}
+            </p>
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+              Points
             </p>
           </div>
         </div>
@@ -233,11 +250,18 @@ export function HomeJiraTickets() {
                       {getTicketDetail(ticket)}
                     </p>
                   </div>
-                  <span
-                    className={`inline-flex min-h-8 shrink-0 items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusBadgeStyles[badgeLabel]}`}
-                  >
-                    {badgeLabel}
-                  </span>
+                  <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                    <span className="inline-flex min-h-8 items-center justify-center rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-semibold text-slate-100">
+                      {ticket.estimatePoints !== null
+                        ? `${ticket.estimatePoints} pts`
+                        : "No pts"}
+                    </span>
+                    <span
+                      className={`inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusBadgeStyles[badgeLabel]}`}
+                    >
+                      {badgeLabel}
+                    </span>
+                  </div>
                 </article>
               );
             })

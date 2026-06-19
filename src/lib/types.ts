@@ -31,6 +31,7 @@ export interface JiraTicketOption extends JiraIssue {
   issueType: string | null;
   assignee: string | null;
   developer: string | null;
+  estimatePoints: number | null;
   updatedAt: string | null;
   sprint: JiraSprintInfo | null;
 }

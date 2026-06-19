@@ -166,6 +166,7 @@ function getMockAssignedTickets(): ListAssignedJiraTicketsResponse {
         issueType: "Story",
         assignee: process.env.JIRA_ASSIGNEE_NAME || "Kevin Cauto",
         developer: process.env.JIRA_ASSIGNEE_NAME || "Kevin Cauto",
+        estimatePoints: 3,
         updatedAt: new Date().toISOString(),
         sprint: {
           id: "mock-active-sprint",
@@ -319,6 +320,41 @@ async function listJiraSprintFieldIds() {
   return Array.from(new Set(sprintFieldIds));
 }
 
+async function listJiraEstimateFieldIds() {
+  const configuredEstimateFieldId = process.env.JIRA_ESTIMATE_FIELD_ID?.trim();
+  const estimateFieldIds = configuredEstimateFieldId
+    ? [configuredEstimateFieldId]
+    : [];
+
+  for (const version of getJiraApiVersions()) {
+    try {
+      const fields = await fetchJiraJson<JiraFieldPayload[]>(
+        `/rest/api/${version}/field`,
+      );
+      const discoveredEstimateFieldIds = fields
+        .filter((field) => {
+          const normalizedName = field.name?.trim().toLowerCase();
+          return (
+            normalizedName === "story points" ||
+            normalizedName === "story point estimate" ||
+            normalizedName === "estimate" ||
+            normalizedName === "points"
+          );
+        })
+        .map((field) => field.id)
+        .filter((id): id is string => Boolean(id));
+
+      estimateFieldIds.push(...discoveredEstimateFieldIds);
+      break;
+    } catch {
+      // Fall back to configured/default estimate field IDs below.
+    }
+  }
+
+  estimateFieldIds.push("customfield_10016", "customfield_10026");
+  return Array.from(new Set(estimateFieldIds));
+}
+
 type JiraFieldMap = Record<string, unknown>;
 
 interface JiraSearchIssuePayload {
@@ -345,6 +381,34 @@ function getFieldName(value: unknown) {
 
 function getFieldString(value: unknown) {
   return typeof value === "string" ? value : getFieldName(value);
+}
+
+function getFieldNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : null;
+  }
+
+  return null;
+}
+
+function getIssueEstimatePoints(
+  fields: JiraFieldMap,
+  estimateFieldIds: string[],
+) {
+  for (const fieldId of estimateFieldIds) {
+    const estimatePoints = getFieldNumber(fields[fieldId]);
+
+    if (estimatePoints !== null) {
+      return estimatePoints;
+    }
+  }
+
+  return null;
 }
 
 function parseSprintString(value: string): JiraSprintInfo | null {
@@ -467,6 +531,7 @@ function mapSearchIssue(
   issue: JiraSearchIssuePayload,
   sprintById: Map<string, JiraSprintInfo>,
   sprintFieldIds: string[],
+  estimateFieldIds: string[],
 ): JiraTicketOption {
   const fields = issue.fields ?? {};
   const developerFieldName = getDeveloperJqlField();
@@ -487,6 +552,7 @@ function mapSearchIssue(
     issueType: getFieldString(fields.issuetype),
     assignee: getFieldString(fields.assignee),
     developer,
+    estimatePoints: getIssueEstimatePoints(fields, estimateFieldIds),
     updatedAt: typeof fields.updated === "string" ? fields.updated : null,
     sprint: getIssueSprint(fields, sprintById, sprintFieldIds),
   };
@@ -557,6 +623,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
   const { jqlValue, displayName } = getConfiguredAssignee();
   const { sprints, notices } = await listBoardSprints();
   const sprintFieldIds = await listJiraSprintFieldIds();
+  const estimateFieldIds = await listJiraEstimateFieldIds();
   const sprintById = new Map(sprints.map((sprint) => [sprint.id, sprint]));
   const sprintClause = sprints.length
     ? ` AND sprint in (${sprints.map((sprint) => sprint.id).join(",")})`
@@ -577,6 +644,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
     getDeveloperFieldId() ?? getDeveloperJqlField(),
     "updated",
     ...sprintFieldIds,
+    ...estimateFieldIds,
   ];
   let response: JiraSearchPayload | null = null;
   let lastError: Error | null = null;
@@ -607,7 +675,9 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   return {
     tickets: (response.issues ?? [])
-      .map((issue) => mapSearchIssue(issue, sprintById, sprintFieldIds))
+      .map((issue) =>
+        mapSearchIssue(issue, sprintById, sprintFieldIds, estimateFieldIds),
+      )
       .sort(sortTicketsBySprint),
     source: "live",
     assignee: displayName,
