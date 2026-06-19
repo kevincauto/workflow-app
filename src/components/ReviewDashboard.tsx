@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 import { strToU8, zipSync } from "fflate";
 
@@ -51,7 +52,7 @@ function MedicalEyebrow({ children }: { children: ReactNode }) {
   return (
     <>
       <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm text-red-500 shadow-sm">
-        <span className="translate-x-[2px] text-lg leading-none">✚</span>
+        <span className="translate-x-0.5 text-lg leading-none">✚</span>
       </span>
       {children}
     </>
@@ -119,6 +120,8 @@ export function ReviewDashboard() {
   const [posting, setPosting] = useState(false);
   const [loadingOpenMrs, setLoadingOpenMrs] = useState(false);
   const [downloadingPayload, setDownloadingPayload] = useState(false);
+  const [confirmingReviewGeneration, setConfirmingReviewGeneration] =
+    useState(false);
 
   async function loadOpenMergeRequests() {
     setLoadingOpenMrs(true);
@@ -223,6 +226,8 @@ export function ReviewDashboard() {
     if (!mergeRequest) {
       return;
     }
+
+    setConfirmingReviewGeneration(false);
 
     setError(null);
     setLoadingReview(true);
@@ -402,7 +407,7 @@ export function ReviewDashboard() {
     review?.findings.filter((finding) => finding.approved).length ?? 0;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,_rgba(30,64,175,0.42),_transparent_24%),radial-gradient(circle_at_86%_12%,_rgba(79,70,229,0.42),_transparent_24%),radial-gradient(circle_at_78%_34%,_rgba(251,146,60,0.34),_transparent_20%),radial-gradient(circle_at_96%_72%,_rgba(34,211,238,0.42),_transparent_28%),radial-gradient(circle_at_12%_88%,_rgba(14,165,233,0.38),_transparent_24%),radial-gradient(circle_at_30%_66%,_rgba(249,115,22,0.26),_transparent_22%),radial-gradient(circle_at_54%_48%,_rgba(37,99,235,0.26),_transparent_32%),linear-gradient(155deg,_#020617_0%,_#082f49_22%,_#172554_46%,_#033348_72%,_#010312_100%)] bg-fixed px-4 py-10 text-white sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(30,64,175,0.42),transparent_24%),radial-gradient(circle_at_86%_12%,rgba(79,70,229,0.42),transparent_24%),radial-gradient(circle_at_78%_34%,rgba(251,146,60,0.34),transparent_20%),radial-gradient(circle_at_96%_72%,rgba(34,211,238,0.42),transparent_28%),radial-gradient(circle_at_12%_88%,rgba(14,165,233,0.38),transparent_24%),radial-gradient(circle_at_30%_66%,rgba(249,115,22,0.26),transparent_22%),radial-gradient(circle_at_54%_48%,rgba(37,99,235,0.26),transparent_32%),linear-gradient(155deg,#020617_0%,#082f49_22%,#172554_46%,#033348_72%,#010312_100%)] bg-fixed px-4 py-10 text-white sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <HeroLogo />
 
@@ -410,6 +415,14 @@ export function ReviewDashboard() {
           title="Select a Merge Request or Paste a URL"
           eyebrow={<MedicalEyebrow>Select A Patient 🤒🤕😷</MedicalEyebrow>}
           className="relative z-40"
+          actions={
+            <Link
+              href="/"
+              className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/15 bg-slate-950/30 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-950/45 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+            >
+              Back to Dashboard
+            </Link>
+          }
         >
           <MrUrlForm
             value={mrUrl}
@@ -470,7 +483,7 @@ export function ReviewDashboard() {
           eyebrow={<MedicalEyebrow>Consult The Specialist 🧑‍⚕️</MedicalEyebrow>}
         >
           <ReviewControls
-            onGenerate={handleGenerateReview}
+            onGenerate={() => setConfirmingReviewGeneration(true)}
             onPackageData={handlePackageDataForCopilot}
             loading={loadingReview}
             canGenerate={Boolean(mergeRequest)}
@@ -541,6 +554,55 @@ export function ReviewDashboard() {
           </>
         ) : null}
       </div>
+
+      {confirmingReviewGeneration ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-ai-review-title"
+        >
+          <div className="w-full max-w-lg rounded-3xl border border-white/15 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] p-6 text-white shadow-[0_30px_100px_rgba(2,6,23,0.72)]">
+            <h2
+              id="confirm-ai-review-title"
+              className="text-xl font-semibold text-white"
+            >
+              Generate AI Review?
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-200">
+              This will send the loaded merge request diff, changed file
+              contents, related repository context, and Jira details to the
+              OpenAI API for review generation.
+            </p>
+            {mergeRequest ? (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-slate-200">
+                <p className="font-semibold text-slate-50">
+                  {mergeRequest.projectName} !{mergeRequest.iid}
+                </p>
+                <p className="mt-1 text-slate-300">{mergeRequest.title}</p>
+              </div>
+            ) : null}
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmingReviewGeneration(false)}
+                disabled={loadingReview}
+                className="min-h-11 rounded-2xl border border-white/15 bg-slate-950/45 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-950/60 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateReview}
+                disabled={loadingReview}
+                className="min-h-11 rounded-2xl border border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-4 py-2 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+              >
+                Yes, Generate Review
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
