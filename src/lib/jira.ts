@@ -199,6 +199,10 @@ function getDeveloperFieldId() {
   return process.env.JIRA_DEVELOPER_FIELD_ID?.trim() || null;
 }
 
+function getEstimateFieldId() {
+  return process.env.JIRA_ESTIMATE_FIELD_ID?.trim() || "customfield_10016";
+}
+
 function getConfiguredAssignee() {
   const accountId = process.env.JIRA_ASSIGNEE_ACCOUNT_ID?.trim();
   const name = process.env.JIRA_ASSIGNEE_NAME?.trim() || "Kevin Cauto";
@@ -223,14 +227,6 @@ interface JiraSprintPagePayload {
   total?: number;
   isLast?: boolean;
   values?: JiraSprintPayload[];
-}
-
-interface JiraFieldPayload {
-  id?: string;
-  name?: string;
-  schema?: {
-    custom?: string;
-  };
 }
 
 function normalizeSprint(payload: JiraSprintPayload): JiraSprintInfo {
@@ -287,74 +283,6 @@ async function listBoardSprints() {
   return { sprints, notices };
 }
 
-async function listJiraSprintFieldIds() {
-  const configuredSprintFieldId = process.env.JIRA_SPRINT_FIELD_ID?.trim();
-  const sprintFieldIds = configuredSprintFieldId
-    ? [configuredSprintFieldId]
-    : [];
-
-  for (const version of getJiraApiVersions()) {
-    try {
-      const fields = await fetchJiraJson<JiraFieldPayload[]>(
-        `/rest/api/${version}/field`,
-      );
-      const discoveredSprintFieldIds = fields
-        .filter((field) => {
-          const normalizedName = field.name?.trim().toLowerCase();
-          return (
-            normalizedName === "sprint" ||
-            field.schema?.custom === "com.pyxis.greenhopper.jira:gh-sprint"
-          );
-        })
-        .map((field) => field.id)
-        .filter((id): id is string => Boolean(id));
-
-      sprintFieldIds.push(...discoveredSprintFieldIds);
-      break;
-    } catch {
-      // Fall back to configured/default sprint field IDs below.
-    }
-  }
-
-  sprintFieldIds.push("customfield_10020");
-  return Array.from(new Set(sprintFieldIds));
-}
-
-async function listJiraEstimateFieldIds() {
-  const configuredEstimateFieldId = process.env.JIRA_ESTIMATE_FIELD_ID?.trim();
-  const estimateFieldIds = configuredEstimateFieldId
-    ? [configuredEstimateFieldId]
-    : [];
-
-  for (const version of getJiraApiVersions()) {
-    try {
-      const fields = await fetchJiraJson<JiraFieldPayload[]>(
-        `/rest/api/${version}/field`,
-      );
-      const discoveredEstimateFieldIds = fields
-        .filter((field) => {
-          const normalizedName = field.name?.trim().toLowerCase();
-          return (
-            normalizedName === "story points" ||
-            normalizedName === "story point estimate" ||
-            normalizedName === "estimate" ||
-            normalizedName === "points"
-          );
-        })
-        .map((field) => field.id)
-        .filter((id): id is string => Boolean(id));
-
-      estimateFieldIds.push(...discoveredEstimateFieldIds);
-      break;
-    } catch {
-      // Fall back to configured/default estimate field IDs below.
-    }
-  }
-
-  estimateFieldIds.push("customfield_10016", "customfield_10026");
-  return Array.from(new Set(estimateFieldIds));
-}
-
 type JiraFieldMap = Record<string, unknown>;
 
 interface JiraSearchIssuePayload {
@@ -384,28 +312,13 @@ function getFieldString(value: unknown) {
 }
 
 function getFieldNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
+  if (typeof value === "number") {
     return value;
   }
 
-  if (typeof value === "string") {
-    const numberValue = Number(value);
-    return Number.isFinite(numberValue) ? numberValue : null;
-  }
-
-  return null;
-}
-
-function getIssueEstimatePoints(
-  fields: JiraFieldMap,
-  estimateFieldIds: string[],
-) {
-  for (const fieldId of estimateFieldIds) {
-    const estimatePoints = getFieldNumber(fields[fieldId]);
-
-    if (estimatePoints !== null) {
-      return estimatePoints;
-    }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   return null;
@@ -435,18 +348,24 @@ function parseSprintString(value: string): JiraSprintInfo | null {
   };
 }
 
-function normalizeIssueSprints(value: unknown): JiraSprintInfo[] {
+function normalizeIssueSprint(value: unknown): JiraSprintInfo | null {
   if (Array.isArray(value)) {
-    return value.flatMap(normalizeIssueSprints);
+    for (const item of value) {
+      const sprint = normalizeIssueSprint(item);
+      if (sprint) {
+        return sprint;
+      }
+    }
+
+    return null;
   }
 
   if (typeof value === "string") {
-    const sprint = parseSprintString(value);
-    return sprint ? [sprint] : [];
+    return parseSprintString(value);
   }
 
   if (!value || typeof value !== "object") {
-    return [];
+    return null;
   }
 
   const sprint = value as {
@@ -465,61 +384,36 @@ function normalizeIssueSprints(value: unknown): JiraSprintInfo[] {
     typeof sprint.state === "string" ? sprint.state.toLowerCase() : null;
 
   if (!id && !name) {
-    return [];
+    return null;
   }
 
-  return [
-    {
-      id: id ?? name ?? "unknown-sprint",
-      name: name ?? id ?? "Unknown sprint",
-      state:
-        state === "active" || state === "future" || state === "closed"
-          ? state
-          : "unknown",
-      startDate: typeof sprint.startDate === "string" ? sprint.startDate : null,
-      endDate: typeof sprint.endDate === "string" ? sprint.endDate : null,
-    },
-  ];
+  return {
+    id: id ?? name ?? "unknown-sprint",
+    name: name ?? id ?? "Unknown sprint",
+    state:
+      state === "active" || state === "future" || state === "closed"
+        ? state
+        : "unknown",
+    startDate: typeof sprint.startDate === "string" ? sprint.startDate : null,
+    endDate: typeof sprint.endDate === "string" ? sprint.endDate : null,
+  };
 }
 
 function getIssueSprint(
   fields: JiraFieldMap,
   sprintById: Map<string, JiraSprintInfo>,
-  sprintFieldIds: string[],
 ) {
-  const configuredSprints = sprintFieldIds.flatMap((fieldId) =>
-    normalizeIssueSprints(fields[fieldId]),
-  );
-  const knownConfiguredSprints = configuredSprints.map(
-    (sprint) => sprintById.get(sprint.id) ?? sprint,
-  );
+  const sprintFieldId = process.env.JIRA_SPRINT_FIELD_ID || "customfield_10020";
+  const configuredSprint = normalizeIssueSprint(fields[sprintFieldId]);
 
-  const activeConfiguredSprint = knownConfiguredSprints.find(
-    (sprint) => sprint.state === "active",
-  );
-
-  if (activeConfiguredSprint) {
-    return activeConfiguredSprint;
-  }
-
-  const futureConfiguredSprint = knownConfiguredSprints.find(
-    (sprint) => sprint.state === "future",
-  );
-
-  if (futureConfiguredSprint) {
-    return futureConfiguredSprint;
-  }
-
-  if (knownConfiguredSprints.length > 0) {
-    return knownConfiguredSprints[0];
+  if (configuredSprint) {
+    return sprintById.get(configuredSprint.id) ?? configuredSprint;
   }
 
   for (const value of Object.values(fields)) {
-    const sprint = normalizeIssueSprints(value).find((candidate) =>
-      sprintById.has(candidate.id),
-    );
+    const sprint = normalizeIssueSprint(value);
 
-    if (sprint) {
+    if (sprint && sprintById.has(sprint.id)) {
       return sprintById.get(sprint.id) ?? sprint;
     }
   }
@@ -530,8 +424,6 @@ function getIssueSprint(
 function mapSearchIssue(
   issue: JiraSearchIssuePayload,
   sprintById: Map<string, JiraSprintInfo>,
-  sprintFieldIds: string[],
-  estimateFieldIds: string[],
 ): JiraTicketOption {
   const fields = issue.fields ?? {};
   const developerFieldName = getDeveloperJqlField();
@@ -539,6 +431,7 @@ function mapSearchIssue(
   const developer = developerFieldId
     ? getFieldString(fields[developerFieldId])
     : getFieldString(fields[developerFieldName]);
+  const estimatePoints = getFieldNumber(fields[getEstimateFieldId()]);
 
   return {
     key: issue.key,
@@ -552,9 +445,9 @@ function mapSearchIssue(
     issueType: getFieldString(fields.issuetype),
     assignee: getFieldString(fields.assignee),
     developer,
-    estimatePoints: getIssueEstimatePoints(fields, estimateFieldIds),
+    estimatePoints,
     updatedAt: typeof fields.updated === "string" ? fields.updated : null,
-    sprint: getIssueSprint(fields, sprintById, sprintFieldIds),
+    sprint: getIssueSprint(fields, sprintById),
   };
 }
 
@@ -574,15 +467,6 @@ function getSprintSortValue(sprint: JiraSprintInfo | null) {
   return 2;
 }
 
-function getSprintNameSortValue(sprint: JiraSprintInfo | null) {
-  if (!sprint) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  const sprintNumber = sprint.name.match(/\d+(?!.*\d)/)?.[0];
-  return sprintNumber ? Number(sprintNumber) : Number.POSITIVE_INFINITY;
-}
-
 function sortTicketsBySprint(left: JiraTicketOption, right: JiraTicketOption) {
   const sprintSort =
     getSprintSortValue(left.sprint) - getSprintSortValue(right.sprint);
@@ -598,20 +482,6 @@ function sortTicketsBySprint(left: JiraTicketOption, right: JiraTicketOption) {
     return leftStart.localeCompare(rightStart);
   }
 
-  const sprintNameSort =
-    getSprintNameSortValue(left.sprint) - getSprintNameSortValue(right.sprint);
-
-  if (sprintNameSort !== 0) {
-    return sprintNameSort;
-  }
-
-  const leftSprintName = left.sprint?.name ?? "";
-  const rightSprintName = right.sprint?.name ?? "";
-
-  if (leftSprintName !== rightSprintName) {
-    return leftSprintName.localeCompare(rightSprintName);
-  }
-
   return (right.updatedAt ?? "").localeCompare(left.updatedAt ?? "");
 }
 
@@ -622,8 +492,6 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   const { jqlValue, displayName } = getConfiguredAssignee();
   const { sprints, notices } = await listBoardSprints();
-  const sprintFieldIds = await listJiraSprintFieldIds();
-  const estimateFieldIds = await listJiraEstimateFieldIds();
   const sprintById = new Map(sprints.map((sprint) => [sprint.id, sprint]));
   const sprintClause = sprints.length
     ? ` AND sprint in (${sprints.map((sprint) => sprint.id).join(",")})`
@@ -642,9 +510,9 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
     "issuetype",
     "assignee",
     getDeveloperFieldId() ?? getDeveloperJqlField(),
+    getEstimateFieldId(),
     "updated",
-    ...sprintFieldIds,
-    ...estimateFieldIds,
+    process.env.JIRA_SPRINT_FIELD_ID || "customfield_10020",
   ];
   let response: JiraSearchPayload | null = null;
   let lastError: Error | null = null;
@@ -675,9 +543,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   return {
     tickets: (response.issues ?? [])
-      .map((issue) =>
-        mapSearchIssue(issue, sprintById, sprintFieldIds, estimateFieldIds),
-      )
+      .map((issue) => mapSearchIssue(issue, sprintById))
       .sort(sortTicketsBySprint),
     source: "live",
     assignee: displayName,

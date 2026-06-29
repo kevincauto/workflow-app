@@ -81,6 +81,7 @@ JIRA_API_VERSION=2
 JIRA_BOARD_ID=
 JIRA_ASSIGNEE_NAME=Kevin Cauto
 JIRA_DEVELOPER_FIELD_NAME=Developer
+JIRA_ESTIMATE_FIELD_ID=customfield_10016
 
 # AI provider
 OPENAI_API_KEY=
@@ -131,6 +132,7 @@ Optional Jira auth settings:
 - `JIRA_ASSIGNEE_NAME` optional, used by Ticket to Code as the Jira user value for Assignee or Developer JQL matching
 - `JIRA_DEVELOPER_FIELD_NAME` optional, defaults to `Developer` for Ticket to Code JQL matching
 - `JIRA_DEVELOPER_FIELD_ID` optional, used to read the Developer display value when Jira returns it as a custom field ID
+- `JIRA_ESTIMATE_FIELD_ID` optional, defaults to `customfield_10016` for Jira story point estimates
 
 Required for live review generation:
 

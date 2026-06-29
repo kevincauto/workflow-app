@@ -71,6 +71,31 @@ export interface FigmaLayerNode {
   children: FigmaLayerNode[];
 }
 
+export type FigmaDetectedControlType =
+  | "radio-group"
+  | "checkbox-group"
+  | "dropdown"
+  | "segmented-control"
+  | "tabs"
+  | "unknown-choice-group";
+
+export type FigmaControlOrientation =
+  | "vertical"
+  | "horizontal"
+  | "grid"
+  | "unknown";
+
+export interface FigmaDetectedControl {
+  name: string;
+  controlType: FigmaDetectedControlType;
+  orientation: FigmaControlOrientation;
+  optionCount: number;
+  options: string[];
+  confidence: "high" | "medium" | "low";
+  evidence: string[];
+  guidance: string;
+}
+
 export interface NormalizedFigmaContext {
   source: "live" | "mock";
   url: string;
@@ -100,6 +125,7 @@ export interface NormalizedFigmaContext {
   text: FigmaTextNode[];
   radii: number[];
   hierarchy: FigmaLayerNode[];
+  detectedControls: FigmaDetectedControl[];
   implementationNotes: string[];
   ambiguityNotes: string[];
 }

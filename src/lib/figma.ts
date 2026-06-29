@@ -1,5 +1,8 @@
 import type {
   FigmaColorToken,
+  FigmaControlOrientation,
+  FigmaDetectedControl,
+  FigmaDetectedControlType,
   FigmaLayerNode,
   FigmaTextNode,
   FigmaUrlParts,
@@ -12,9 +15,21 @@ interface FigmaNode {
   type?: string;
   children?: FigmaNode[];
   absoluteBoundingBox?: {
+    x?: number;
+    y?: number;
     width?: number;
     height?: number;
   };
+  visible?: boolean;
+  componentId?: string;
+  componentSetId?: string;
+  componentProperties?: Record<
+    string,
+    {
+      type?: string;
+      value?: string | boolean | number;
+    }
+  >;
   layoutMode?: string;
   primaryAxisSizingMode?: string;
   counterAxisSizingMode?: string;
@@ -64,8 +79,9 @@ interface FigmaImagesPayload {
 }
 
 const figmaRequestTimeoutMs = 20_000;
-const figmaExtractionDepth = 4;
+const figmaExtractionDepth = 6;
 const maxCollectedDesignTokens = 40;
+const maxDetectedControls = 40;
 const maxTraversalNodes = 500;
 
 export function parseFigmaUrl(value: string): FigmaUrlParts {
@@ -277,6 +293,348 @@ function buildHierarchy(node: FigmaNode, depth = 0): FigmaLayerNode[] {
   }));
 }
 
+function normalizeName(value: string | undefined) {
+  return (value ?? "").toLowerCase();
+}
+
+function includesAny(value: string, terms: string[]) {
+  return terms.some((term) => value.includes(term));
+}
+
+function getComponentPropertyText(node: FigmaNode) {
+  return Object.entries(node.componentProperties ?? {})
+    .map(([key, property]) => `${key} ${String(property.value ?? "")}`)
+    .join(" ")
+    .toLowerCase();
+}
+
+function getNodeSearchText(node: FigmaNode) {
+  return [
+    node.name,
+    node.type,
+    node.componentId,
+    node.componentSetId,
+    getComponentPropertyText(node),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isVisibleNode(node: FigmaNode) {
+  return node.visible !== false;
+}
+
+function collectTextLabels(node: FigmaNode, labels: string[], limit = 12) {
+  if (labels.length >= limit || !isVisibleNode(node)) {
+    return;
+  }
+
+  if (node.type === "TEXT" && node.characters?.trim()) {
+    labels.push(node.characters.trim().replace(/\s+/g, " "));
+  }
+
+  for (const child of node.children ?? []) {
+    collectTextLabels(child, labels, limit);
+  }
+}
+
+function getTextLabels(node: FigmaNode, limit = 12) {
+  const labels: string[] = [];
+  collectTextLabels(node, labels, limit);
+  return Array.from(new Set(labels));
+}
+
+function getOrientationFromGeometry(
+  children: FigmaNode[],
+): FigmaControlOrientation {
+  const boxes = children
+    .map((child) => child.absoluteBoundingBox)
+    .filter(
+      (box): box is { x: number; y: number; width?: number; height?: number } =>
+        typeof box?.x === "number" && typeof box.y === "number",
+    );
+
+  if (boxes.length < 2) {
+    return "unknown";
+  }
+
+  const xValues = boxes.map((box) => box.x);
+  const yValues = boxes.map((box) => box.y);
+  const xSpread = Math.max(...xValues) - Math.min(...xValues);
+  const ySpread = Math.max(...yValues) - Math.min(...yValues);
+
+  if (ySpread > 8 && xSpread <= 12) {
+    return "vertical";
+  }
+
+  if (xSpread > 8 && ySpread <= 12) {
+    return "horizontal";
+  }
+
+  if (xSpread > 8 && ySpread > 8) {
+    return "grid";
+  }
+
+  return "unknown";
+}
+
+function getOrientation(node: FigmaNode, optionNodes: FigmaNode[]) {
+  if (node.layoutMode === "VERTICAL") {
+    return "vertical";
+  }
+
+  if (node.layoutMode === "HORIZONTAL") {
+    return "horizontal";
+  }
+
+  return getOrientationFromGeometry(optionNodes);
+}
+
+function getOptionNodes(
+  node: FigmaNode,
+  controlType: FigmaDetectedControlType,
+) {
+  const children = (node.children ?? []).filter(isVisibleNode);
+
+  if (controlType === "dropdown") {
+    return children;
+  }
+
+  const optionTerms = [
+    "option",
+    "radio",
+    "checkbox",
+    "choice",
+    "item",
+    "selected",
+    "unselected",
+    "checked",
+    "unchecked",
+  ];
+  const matchingChildren = children.filter((child) =>
+    includesAny(getNodeSearchText(child), optionTerms),
+  );
+
+  return matchingChildren.length >= 2 ? matchingChildren : children;
+}
+
+function getControlType(node: FigmaNode): FigmaDetectedControlType | null {
+  const text = getNodeSearchText(node);
+  const name = normalizeName(node.name);
+
+  if (includesAny(name, ["radio group", "radio-group", "radio button group"])) {
+    return "radio-group";
+  }
+
+  if (includesAny(name, ["checkbox group", "checkbox-group"])) {
+    return "checkbox-group";
+  }
+
+  if (
+    name === "select" ||
+    name === "_selecttrigger" ||
+    includesAny(text, ["dropdown", "drop down", "select menu", "combobox"])
+  ) {
+    return "dropdown";
+  }
+
+  if (includesAny(name, ["segmented", "segment control", "toggle group"])) {
+    return "segmented-control";
+  }
+
+  if (includesAny(name, ["tabs", "tab group", "tablist"])) {
+    return "tabs";
+  }
+
+  return null;
+}
+
+function isBroadLayoutContainer(node: FigmaNode) {
+  const text = getNodeSearchText(node);
+
+  return includesAny(text, [
+    "main",
+    "page",
+    "header",
+    "footer",
+    "content",
+    "container",
+    "section",
+    "wrapper",
+    "layout",
+  ]);
+}
+
+function getGuidance(input: {
+  controlType: FigmaDetectedControlType;
+  orientation: FigmaControlOrientation;
+  optionCount: number;
+}) {
+  const orientationText =
+    input.orientation === "vertical"
+      ? " Preserve vertical stacking."
+      : input.orientation === "horizontal"
+        ? " Preserve horizontal layout."
+        : input.orientation === "grid"
+          ? " Preserve the grid-style option layout."
+          : " Verify orientation against the Figma preview before coding.";
+
+  if (input.controlType === "radio-group") {
+    return `Implement as a radio button group with ${input.optionCount} options, not as a dropdown/select.${orientationText}`;
+  }
+
+  if (input.controlType === "checkbox-group") {
+    return `Implement as a checkbox group with ${input.optionCount} options.${orientationText}`;
+  }
+
+  if (input.controlType === "dropdown") {
+    return "Implement as a dropdown/select only if the Figma control shows a closed select, menu trigger, or chevron affordance.";
+  }
+
+  if (input.controlType === "segmented-control") {
+    return `Implement as a segmented control with ${input.optionCount} segments.${orientationText}`;
+  }
+
+  if (input.controlType === "tabs") {
+    return `Implement as tabs with ${input.optionCount} tab options.${orientationText}`;
+  }
+
+  return `This appears to be a choice group with ${input.optionCount} options.${orientationText}`;
+}
+
+function buildDetectedControl(
+  node: FigmaNode,
+  controlType: FigmaDetectedControlType,
+): FigmaDetectedControl | null {
+  const optionNodes = getOptionNodes(node, controlType);
+  const optionLabels = optionNodes.flatMap((child) => getTextLabels(child, 3));
+  const fallbackLabels = getTextLabels(node, 12);
+  const options = Array.from(
+    new Set(optionLabels.length ? optionLabels : fallbackLabels),
+  )
+    .filter((label) => normalizeName(label) !== normalizeName(node.name))
+    .slice(0, 12);
+  const optionCount =
+    controlType === "dropdown"
+      ? Math.max(options.length, 1)
+      : Math.max(options.length, optionNodes.length);
+
+  if (controlType !== "dropdown" && optionCount < 2) {
+    return null;
+  }
+
+  const orientation = getOrientation(node, optionNodes);
+  const evidence = [
+    `Layer name: ${node.name ?? "Unnamed"}`,
+    node.layoutMode ? `Auto layout: ${node.layoutMode}` : null,
+    optionNodes.length
+      ? `Candidate option layers: ${optionNodes.length}`
+      : null,
+    options.length ? `Text labels: ${options.join(", ")}` : null,
+    getComponentPropertyText(node)
+      ? `Component properties: ${getComponentPropertyText(node)}`
+      : null,
+  ].filter((item): item is string => Boolean(item));
+  const confidence =
+    controlType !== "unknown-choice-group" &&
+    (orientation !== "unknown" || options.length >= 2)
+      ? "high"
+      : options.length >= 2
+        ? "medium"
+        : "low";
+
+  return {
+    name: node.name ?? "Unnamed control",
+    controlType,
+    orientation,
+    optionCount,
+    options,
+    confidence,
+    evidence: evidence.slice(0, 6),
+    guidance: getGuidance({ controlType, orientation, optionCount }),
+  };
+}
+
+function looksLikeChoiceGroup(node: FigmaNode) {
+  const children = (node.children ?? []).filter(isVisibleNode);
+  const text = getNodeSearchText(node);
+
+  if (children.length < 2 || children.length > 8) {
+    return false;
+  }
+
+  if (isBroadLayoutContainer(node)) {
+    return false;
+  }
+
+  if (!includesAny(text, ["choice group", "option group", "selection group"])) {
+    return false;
+  }
+
+  const textChildCount = children.filter(
+    (child) => getTextLabels(child, 1).length > 0,
+  ).length;
+  return textChildCount >= 2;
+}
+
+function collectDetectedControls(
+  node: FigmaNode,
+  controls: FigmaDetectedControl[],
+  visited: { count: number },
+) {
+  if (
+    visited.count >= maxTraversalNodes ||
+    controls.length >= maxDetectedControls
+  ) {
+    return;
+  }
+
+  visited.count += 1;
+
+  if (isVisibleNode(node)) {
+    const nodeName = normalizeName(node.name);
+    const explicitType = getControlType(node);
+    const isInternalTrigger =
+      nodeName.startsWith("_") && nodeName.includes("trigger");
+    const inferredType = isInternalTrigger
+      ? null
+      : (explicitType ??
+        (looksLikeChoiceGroup(node) ? "unknown-choice-group" : null));
+    const detectedControl = inferredType
+      ? buildDetectedControl(node, inferredType)
+      : null;
+
+    if (detectedControl) {
+      controls.push(detectedControl);
+    }
+  }
+
+  for (const child of node.children ?? []) {
+    collectDetectedControls(child, controls, visited);
+  }
+}
+
+function getDetectedControls(node: FigmaNode) {
+  const controls: FigmaDetectedControl[] = [];
+  collectDetectedControls(node, controls, { count: 0 });
+
+  const bestByName = new Map<string, FigmaDetectedControl>();
+  for (const control of controls) {
+    const key = `${control.name}-${control.controlType}-${control.options.join("|")}`;
+    const existingControl = bestByName.get(key);
+
+    if (
+      !existingControl ||
+      control.evidence.length > existingControl.evidence.length
+    ) {
+      bestByName.set(key, control);
+    }
+  }
+
+  return Array.from(bestByName.values()).slice(0, maxDetectedControls);
+}
+
 function normalizeFigmaContext(input: {
   parts: FigmaUrlParts;
   fileName: string;
@@ -290,6 +648,7 @@ function normalizeFigmaContext(input: {
   collectColors(input.node, colors, { count: 0 });
   collectText(input.node, text, { count: 0 });
   collectRadii(input.node, radii, { count: 0 });
+  const detectedControls = getDetectedControls(input.node);
 
   return {
     source: "live",
@@ -320,9 +679,11 @@ function normalizeFigmaContext(input: {
     text: text.slice(0, maxCollectedDesignTokens),
     radii: Array.from(radii).sort((left, right) => left - right),
     hierarchy: buildHierarchy(input.node),
+    detectedControls,
     implementationNotes: [
       "Use this normalized Figma context as visual guidance, not as raw source code.",
       "Preserve spacing, text hierarchy, colors, radii, and layout direction where they are represented here.",
+      "Preserve detected control types and option orientation. Do not replace radio groups with dropdowns unless the detected control says dropdown.",
     ],
     ambiguityNotes: [
       ...(input.previewImageUrl

@@ -20,6 +20,29 @@ function renderHierarchy(nodes: FigmaLayerNode[], depth = 0): string[] {
   ]);
 }
 
+function renderDetectedControls(figma: NormalizedFigmaContext) {
+  if (!figma.detectedControls.length) {
+    return "No specific controls were detected. Verify control type and option orientation against the Figma preview when implementing.";
+  }
+
+  return figma.detectedControls
+    .map((control) =>
+      [
+        `- ${control.name}`,
+        `  - Type: ${control.controlType}`,
+        `  - Orientation: ${control.orientation}`,
+        `  - Option count: ${control.optionCount}`,
+        `  - Options: ${control.options.length ? control.options.join(", ") : "Not extracted"}`,
+        `  - Confidence: ${control.confidence}`,
+        `  - Guidance: ${control.guidance}`,
+        ...(control.evidence.length
+          ? [`  - Evidence: ${control.evidence.join("; ")}`]
+          : []),
+      ].join("\n"),
+    )
+    .join("\n");
+}
+
 function buildFigmaMarkdown(figma: NormalizedFigmaContext | null) {
   if (!figma) {
     return "No Figma context was attached to this package.\n";
@@ -62,6 +85,10 @@ function buildFigmaMarkdown(figma: NormalizedFigmaContext | null) {
           )
           .join("\n")
       : "No text nodes were extracted.",
+    "",
+    "## Detected Controls",
+    "",
+    renderDetectedControls(figma),
     "",
     "## Radii",
     "",
@@ -120,6 +147,7 @@ export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
       issueType: input.ticket.issueType,
       assignee: input.ticket.assignee,
       developer: input.ticket.developer,
+      estimatePoints: input.ticket.estimatePoints,
       updatedAt: input.ticket.updatedAt,
       sprint: input.ticket.sprint,
     },
@@ -131,6 +159,7 @@ export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
           selectedNodeName: input.figma.selectedNodeName,
           selectedNodeType: input.figma.selectedNodeType,
           previewImageUrl: input.figma.previewImageUrl,
+          detectedControlCount: input.figma.detectedControls.length,
         }
       : null,
     packageFiles: [
@@ -157,6 +186,7 @@ export function buildTicketMarkdown(input: TicketToCodePackageInput) {
     `- Issue type: ${input.ticket.issueType ?? "Unknown"}`,
     `- Assignee: ${input.ticket.assignee ?? "Unknown"}`,
     `- Developer: ${input.ticket.developer ?? "Unknown"}`,
+    `- Estimate: ${input.ticket.estimatePoints !== null ? `${input.ticket.estimatePoints} points` : "Unknown"}`,
     `- Sprint: ${input.ticket.sprint?.name ?? "Unknown"}`,
     `- Updated: ${input.ticket.updatedAt ?? "Unknown"}`,
     "",
@@ -189,8 +219,19 @@ export function buildAgentPrompt(input: TicketToCodePackageInput) {
     "## Design Context",
     "",
     input.figma
-      ? "Use `figma-context.md` and `figma-context.json` for visual guidance. Preserve layout direction, spacing, dimensions, text hierarchy, colors, and border radii where they map cleanly to the app's design system. Ask for human review when the Figma context is ambiguous or conflicts with existing UI conventions."
+      ? "Use `figma-context.md` and `figma-context.json` for visual guidance. Preserve layout direction, spacing, dimensions, text hierarchy, colors, border radii, detected control types, option counts, and option orientation where they map cleanly to the app's design system. If detected controls say radio-group, implement radio buttons, not a dropdown/select. Preserve vertical radio groups as vertical and horizontal radio groups as horizontal. Ask for human review when the Figma context is ambiguous or conflicts with existing UI conventions."
       : "No Figma context is attached. Follow existing app UI conventions and ask for human review when visual requirements are ambiguous.",
+    input.figma?.detectedControls.length
+      ? [
+          "",
+          "## Detected Control Checklist",
+          "",
+          ...input.figma.detectedControls.map(
+            (control) =>
+              `- ${control.name}: ${control.controlType}, ${control.orientation}, ${control.optionCount} options. ${control.guidance}`,
+          ),
+        ].join("\n")
+      : "",
     "",
     "## Expected Agent Behavior",
     "",
@@ -199,6 +240,7 @@ export function buildAgentPrompt(input: TicketToCodePackageInput) {
     "- Keep changes focused on this ticket.",
     "- Add or update tests when the implementation touches meaningful behavior.",
     "- Do not invent requirements that are not present in the ticket or design context.",
+    "- Before finishing, compare control type and option orientation against the detected Figma controls and preview reference.",
     "",
   ].join("\n");
 }
