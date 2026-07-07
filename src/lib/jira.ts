@@ -203,6 +203,13 @@ function getEstimateFieldId() {
   return process.env.JIRA_ESTIMATE_FIELD_ID?.trim() || "customfield_10016";
 }
 
+function getConfiguredEstimateFieldIds() {
+  return getEstimateFieldId()
+    .split(",")
+    .map((fieldId) => fieldId.trim())
+    .filter(Boolean);
+}
+
 function getConfiguredAssignee() {
   const accountId = process.env.JIRA_ASSIGNEE_ACCOUNT_ID?.trim();
   const name = process.env.JIRA_ASSIGNEE_NAME?.trim() || "Kevin Cauto";
@@ -294,6 +301,14 @@ interface JiraSearchPayload {
   issues?: JiraSearchIssuePayload[];
 }
 
+interface JiraFieldPayload {
+  id?: string;
+  name?: string;
+  schema?: {
+    custom?: string;
+  };
+}
+
 function getFieldName(value: unknown) {
   if (!value || typeof value !== "object") {
     return null;
@@ -319,6 +334,61 @@ function getFieldNumber(value: unknown) {
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function normalizeFieldName(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function isEstimateField(field: JiraFieldPayload) {
+  const fieldName = field.name ? normalizeFieldName(field.name) : "";
+  const customSchema = field.schema?.custom?.toLowerCase() ?? "";
+
+  return (
+    [
+      "story points",
+      "story point estimate",
+      "story point estimates",
+      "estimate points",
+      "points",
+    ].includes(fieldName) || customSchema.includes("storypoints")
+  );
+}
+
+async function listEstimateFieldIds() {
+  const configuredFieldIds = getConfiguredEstimateFieldIds();
+  let discoveredFieldIds: string[] = [];
+
+  for (const version of getJiraApiVersions()) {
+    try {
+      const fields = await fetchJiraJson<JiraFieldPayload[]>(
+        `/rest/api/${version}/field`,
+      );
+      discoveredFieldIds = fields
+        .filter((field) => field.id && isEstimateField(field))
+        .map((field) => field.id as string);
+      break;
+    } catch {
+      discoveredFieldIds = [];
+    }
+  }
+
+  return Array.from(new Set([...configuredFieldIds, ...discoveredFieldIds]));
+}
+
+function getIssueEstimatePoints(
+  fields: JiraFieldMap,
+  estimateFieldIds: string[],
+) {
+  for (const fieldId of estimateFieldIds) {
+    const estimatePoints = getFieldNumber(fields[fieldId]);
+
+    if (estimatePoints !== null) {
+      return estimatePoints;
+    }
   }
 
   return null;
@@ -424,6 +494,7 @@ function getIssueSprint(
 function mapSearchIssue(
   issue: JiraSearchIssuePayload,
   sprintById: Map<string, JiraSprintInfo>,
+  estimateFieldIds: string[],
 ): JiraTicketOption {
   const fields = issue.fields ?? {};
   const developerFieldName = getDeveloperJqlField();
@@ -431,7 +502,7 @@ function mapSearchIssue(
   const developer = developerFieldId
     ? getFieldString(fields[developerFieldId])
     : getFieldString(fields[developerFieldName]);
-  const estimatePoints = getFieldNumber(fields[getEstimateFieldId()]);
+  const estimatePoints = getIssueEstimatePoints(fields, estimateFieldIds);
 
   return {
     key: issue.key,
@@ -492,6 +563,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   const { jqlValue, displayName } = getConfiguredAssignee();
   const { sprints, notices } = await listBoardSprints();
+  const estimateFieldIds = await listEstimateFieldIds();
   const sprintById = new Map(sprints.map((sprint) => [sprint.id, sprint]));
   const sprintClause = sprints.length
     ? ` AND sprint in (${sprints.map((sprint) => sprint.id).join(",")})`
@@ -510,7 +582,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
     "issuetype",
     "assignee",
     getDeveloperFieldId() ?? getDeveloperJqlField(),
-    getEstimateFieldId(),
+    ...estimateFieldIds,
     "updated",
     process.env.JIRA_SPRINT_FIELD_ID || "customfield_10020",
   ];
@@ -543,7 +615,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   return {
     tickets: (response.issues ?? [])
-      .map((issue) => mapSearchIssue(issue, sprintById))
+      .map((issue) => mapSearchIssue(issue, sprintById, estimateFieldIds))
       .sort(sortTicketsBySprint),
     source: "live",
     assignee: displayName,

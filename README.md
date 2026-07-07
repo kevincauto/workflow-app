@@ -132,7 +132,7 @@ Optional Jira auth settings:
 - `JIRA_ASSIGNEE_NAME` optional, used by Ticket to Code as the Jira user value for Assignee or Developer JQL matching
 - `JIRA_DEVELOPER_FIELD_NAME` optional, defaults to `Developer` for Ticket to Code JQL matching
 - `JIRA_DEVELOPER_FIELD_ID` optional, used to read the Developer display value when Jira returns it as a custom field ID
-- `JIRA_ESTIMATE_FIELD_ID` optional, defaults to `customfield_10016` for Jira story point estimates
+- `JIRA_ESTIMATE_FIELD_ID` optional, defaults to `customfield_10016` for Jira story point estimates; the app also auto-detects common Jira story point fields, and this value may be a comma-separated fallback list
 
 Required for live review generation:
 
