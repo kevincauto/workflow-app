@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         repoName: body.mergeRequest.projectName,
         repoPath: body.mergeRequest.projectPath,
         jiraKey: body.jiraKey,
-        model: process.env.OPENAI_MODEL,
+        model: process.env.AI_CENTER_MODEL,
         generatedFindings: body.findings,
         postedFindings,
         filesChanged: body.mergeRequest.changedFiles.length,

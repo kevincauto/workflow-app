@@ -571,8 +571,8 @@ export function ReviewDashboard() {
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-200">
               This will send the loaded merge request diff, changed file
-              contents, related repository context, and Jira details to the
-              OpenAI API for review generation.
+              contents, related repository context, and Jira details to the AI
+              Center Gateway for review generation.
             </p>
             {mergeRequest ? (
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-slate-200">

@@ -4,6 +4,8 @@ import { generateReview } from "@/lib/ai";
 import { collectRetrievalContext } from "@/lib/retrieval";
 import type { ReviewRequestPayload } from "@/lib/types";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ReviewRequestPayload;

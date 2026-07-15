@@ -83,9 +83,13 @@ JIRA_ASSIGNEE_NAME=Kevin Cauto
 JIRA_DEVELOPER_FIELD_NAME=Developer
 JIRA_ESTIMATE_FIELD_ID=customfield_10016
 
-# AI provider
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.5
+# AI Center Gateway
+AI_CENTER_HOST_URL=
+AI_CENTER_API_KEY=
+AI_CENTER_API_SECRET=
+AI_CENTER_CHAT_PATH=/chat/completions/{deployment}
+AI_CENTER_DEPLOYMENT=azure-openai-4o-east-2024-08-06
+AI_CENTER_MODEL=azure-openai-4o-east-2024-08-06
 ```
 
 You may need to be connected to the company VPN or org network for the app to
@@ -136,9 +140,12 @@ Optional Jira auth settings:
 
 Required for live review generation:
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL` recommended model: `gpt-5.5`
-- `OPENAI_BASE_URL` optional, defaults to OpenAI chat completions
+- `AI_CENTER_HOST_URL` from the Developer Studio credential modal
+- `AI_CENTER_API_KEY` from the Developer Studio credential modal
+- `AI_CENTER_API_SECRET` from the Developer Studio credential modal
+- `AI_CENTER_CHAT_PATH` optional, use `/chat/completions/{deployment}` for the documented deployment route; a fully expanded path like `/chat/completions/azure-openai-4o-east-2024-08-06` also works
+- `AI_CENTER_DEPLOYMENT` deployment identifier appended to the chat path, substituted into `{deployment}`, or left unchanged when the path already ends with the deployment
+- `AI_CENTER_MODEL` model name sent in the AI Center request body and recorded in local review metrics when provided
 
 ## Routes
 

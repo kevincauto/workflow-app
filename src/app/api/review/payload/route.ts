@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { buildOpenAiDebugPayload } from "@/lib/ai";
+import { buildAiCenterReviewDebugPayload } from "@/lib/ai";
 import { collectRetrievalContext } from "@/lib/retrieval";
 import type { RetrievalResult, ReviewRequestPayload } from "@/lib/types";
+
+export const runtime = "nodejs";
 
 interface ReviewPayloadRequest extends ReviewRequestPayload {
   retrieval?: RetrievalResult;
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
     const retrieval =
       body.retrieval ?? (await collectRetrievalContext(body.mergeRequest));
 
-    const payload = buildOpenAiDebugPayload({
+    const payload = buildAiCenterReviewDebugPayload({
       mergeRequest: body.mergeRequest,
       jiraIssue: body.jiraIssue,
       retrieval,

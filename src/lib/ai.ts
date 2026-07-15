@@ -2,6 +2,12 @@ import {
   normalizeFindingsAgainstDiff,
   normalizeMarkdownBackticks,
 } from "@/lib/lineMapping";
+import {
+  buildAiCenterChatDebugPayload,
+  callAiCenterChat,
+  isAiCenterConfigured,
+  type AiCenterMessage,
+} from "@/lib/ai-center-client";
 import { buildReviewPrompt } from "@/lib/prompt";
 import type {
   JiraIssue,
@@ -11,10 +17,6 @@ import type {
   ReviewResult,
   ReviewSummary,
 } from "@/lib/types";
-
-function isAiConfigured() {
-  return Boolean(process.env.OPENAI_API_KEY);
-}
 
 function createFinding(
   seed: Omit<ReviewFinding, "id" | "approved">,
@@ -200,78 +202,62 @@ function parseAiResponse(payload: unknown): {
   };
 }
 
-const openAiSystemPrompt =
+const aiCenterSystemPrompt =
   "You are a senior engineer performing a merge request review. Return only valid JSON.";
 
-function buildOpenAiRequestBody(input: {
+function buildAiCenterReviewMessages(input: {
   mergeRequest: MergeRequestContext;
   jiraIssue: JiraIssue | null;
   retrieval: RetrievalResult;
-}) {
-  return {
-    model: process.env.OPENAI_MODEL || "gpt-5.4-mini",
-    response_format: { type: "json_object" as const },
-    messages: [
-      {
-        role: "system" as const,
-        content: openAiSystemPrompt,
-      },
-      {
-        role: "user" as const,
-        content: buildReviewPrompt(input),
-      },
-    ],
-  };
-}
-
-export function buildOpenAiDebugPayload(input: {
-  mergeRequest: MergeRequestContext;
-  jiraIssue: JiraIssue | null;
-  retrieval: RetrievalResult;
-}) {
-  return {
-    endpoint:
-      process.env.OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions",
-    method: "POST" as const,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer [REDACTED]",
+}): AiCenterMessage[] {
+  return [
+    {
+      role: "system",
+      content: aiCenterSystemPrompt,
     },
-    body: buildOpenAiRequestBody(input),
-  };
+    {
+      role: "user",
+      content: buildReviewPrompt(input),
+    },
+  ];
 }
 
-async function requestOpenAiReview(input: {
+export function buildAiCenterReviewDebugPayload(input: {
+  mergeRequest: MergeRequestContext;
+  jiraIssue: JiraIssue | null;
+  retrieval: RetrievalResult;
+}) {
+  return buildAiCenterChatDebugPayload(buildAiCenterReviewMessages(input), {
+    maxTokens: 4000,
+    temperature: 0.2,
+    responseFormat: {
+      type: "json_object",
+    },
+  });
+}
+
+async function requestAiCenterReview(input: {
   mergeRequest: MergeRequestContext;
   jiraIssue: JiraIssue | null;
   retrieval: RetrievalResult;
 }): Promise<ReviewResult> {
-  const requestBody = buildOpenAiRequestBody(input);
-  const response = await fetch(
-    process.env.OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify(requestBody),
+  const payload = (await callAiCenterChat(buildAiCenterReviewMessages(input), {
+    maxTokens: 4000,
+    temperature: 0.2,
+    responseFormat: {
+      type: "json_object",
     },
-  );
-
-  if (!response.ok) {
-    throw new Error(`AI review request failed with status ${response.status}`);
-  }
-
-  const payload = (await response.json()) as {
+  })) as {
     choices?: Array<{
       message?: {
         content?: string;
       };
+      text?: string;
     }>;
   };
 
-  const content = payload.choices?.[0]?.message?.content;
+  const content =
+    payload.choices?.[0]?.message?.content ?? payload.choices?.[0]?.text;
   if (!content) {
     throw new Error("AI review response did not include content.");
   }
@@ -296,9 +282,9 @@ export async function generateReview(input: {
   jiraIssue: JiraIssue | null;
   retrieval: RetrievalResult;
 }): Promise<ReviewResult> {
-  if (isAiConfigured()) {
+  if (isAiCenterConfigured()) {
     try {
-      return await requestOpenAiReview(input);
+      return await requestAiCenterReview(input);
     } catch {
       // Fall through to deterministic heuristics for hack-week resilience.
     }
