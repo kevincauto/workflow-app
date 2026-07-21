@@ -242,7 +242,8 @@ export function buildOpenAiDebugPayload(input: {
 }) {
   return {
     endpoint:
-      process.env.OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions",
+      process.env.OPENAI_BASE_URL ||
+      "https://api.openai.com/v1/chat/completions",
     method: "POST" as const,
     headers: {
       "Content-Type": "application/json",
