@@ -16,6 +16,17 @@ function isAiConfigured() {
   return Boolean(process.env.OPENAI_API_KEY);
 }
 
+function isMockReviewModeEnabled() {
+  return process.env.AI_REVIEW_MOCK_MODE === "true";
+}
+
+export class AiReviewUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AiReviewUnavailableError";
+  }
+}
+
 function createFinding(
   seed: Omit<ReviewFinding, "id" | "approved">,
   index: number,
@@ -260,7 +271,12 @@ async function requestOpenAiReview(input: {
   );
 
   if (!response.ok) {
-    throw new Error(`AI review request failed with status ${response.status}`);
+    const responseText = await response.text();
+    const detail = responseText ? `: ${responseText.slice(0, 500)}` : "";
+
+    throw new AiReviewUnavailableError(
+      `AI review request failed with status ${response.status}${detail}`,
+    );
   }
 
   const payload = (await response.json()) as {
@@ -273,7 +289,9 @@ async function requestOpenAiReview(input: {
 
   const content = payload.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error("AI review response did not include content.");
+    throw new AiReviewUnavailableError(
+      "AI review response did not include content.",
+    );
   }
 
   const parsed = parseAiResponse(JSON.parse(content));
@@ -297,11 +315,13 @@ export async function generateReview(input: {
   retrieval: RetrievalResult;
 }): Promise<ReviewResult> {
   if (isAiConfigured()) {
-    try {
-      return await requestOpenAiReview(input);
-    } catch {
-      // Fall through to deterministic heuristics for hack-week resilience.
-    }
+    return requestOpenAiReview(input);
+  }
+
+  if (!isMockReviewModeEnabled()) {
+    throw new AiReviewUnavailableError(
+      "OPENAI_API_KEY is not configured. Add it to .env.local and restart the dev server, or set AI_REVIEW_MOCK_MODE=true to use demo review findings.",
+    );
   }
 
   const findings = normalizeFindingsAgainstDiff(

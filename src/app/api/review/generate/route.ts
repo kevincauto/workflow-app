@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { generateReview } from "@/lib/ai";
+import { AiReviewUnavailableError, generateReview } from "@/lib/ai";
 import { collectRetrievalContext } from "@/lib/retrieval";
 import type { ReviewRequestPayload } from "@/lib/types";
 
@@ -23,12 +23,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json(review);
   } catch (error) {
+    const status = error instanceof AiReviewUnavailableError ? 503 : 500;
+
     return NextResponse.json(
       {
         error:
           error instanceof Error ? error.message : "Unable to generate review.",
       },
-      { status: 500 },
+      { status },
     );
   }
 }

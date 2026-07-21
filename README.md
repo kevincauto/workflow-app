@@ -140,6 +140,10 @@ Required for live review generation:
 - `OPENAI_MODEL` recommended model: `gpt-5.5`
 - `OPENAI_BASE_URL` optional, defaults to OpenAI chat completions
 
+Optional AI demo mode:
+
+- `AI_REVIEW_MOCK_MODE=true` enables deterministic demo review findings when `OPENAI_API_KEY` is not configured. Without this flag, `/api/review/generate` returns a configuration error instead of silently falling back to mock results.
+
 ## Routes
 
 - `POST /api/mr/load` loads merge request context and Jira key candidates
