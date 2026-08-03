@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
 import type { NormalizedFigmaContext } from "@/lib/types";
@@ -9,21 +10,31 @@ const maxZoom = 4;
 const zoomStep = 0.25;
 
 interface FigmaContextPanelProps {
+  label: string;
   figmaUrl: string;
   figma: NormalizedFigmaContext | null;
   loading: boolean;
+  canAdd: boolean;
+  removable: boolean;
   onUrlChange: (url: string) => void;
   onExtract: () => void;
   onClear: () => void;
+  onAdd: () => void;
+  onRemove: () => void;
 }
 
 export function FigmaContextPanel({
+  label,
   figmaUrl,
   figma,
   loading,
+  canAdd,
+  removable,
   onUrlChange,
   onExtract,
   onClear,
+  onAdd,
+  onRemove,
 }: FigmaContextPanelProps) {
   const [previewZoom, setPreviewZoom] = useState(1);
 
@@ -33,6 +44,35 @@ export function FigmaContextPanel({
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">
+          {label}
+        </p>
+        <div className="flex gap-2">
+          {canAdd ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-300/40 text-cyan-100 transition hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              aria-label="Add second Figma context"
+              title="Add Figma context"
+            >
+              <Plus aria-hidden="true" size={19} />
+            </button>
+          ) : null}
+          {removable ? (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-rose-300/25 text-rose-200 transition hover:bg-rose-400/10 focus:outline-none focus:ring-2 focus:ring-rose-300"
+              aria-label={`Remove ${label}`}
+              title="Remove Figma context"
+            >
+              <Trash2 aria-hidden="true" size={18} />
+            </button>
+          ) : null}
+        </div>
+      </div>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <input
           type="url"
@@ -44,7 +84,10 @@ export function FigmaContextPanel({
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={onExtract}
+            onClick={() => {
+              setPreviewZoom(1);
+              onExtract();
+            }}
             disabled={loading || !figmaUrl.trim()}
             className="rounded-2xl border border-cyan-300/50 bg-slate-950/25 px-4 py-3 text-sm font-semibold text-cyan-50 transition hover:bg-slate-950/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -53,10 +96,15 @@ export function FigmaContextPanel({
           {figma ? (
             <button
               type="button"
-              onClick={onClear}
-              className="rounded-2xl border border-white/15 bg-slate-950/25 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-950/40"
+              onClick={() => {
+                setPreviewZoom(1);
+                onClear();
+              }}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-white/15 bg-slate-950/25 text-slate-100 transition hover:bg-slate-950/40 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              aria-label={`Clear extracted ${label}`}
+              title="Clear extracted context"
             >
-              Clear
+              <X aria-hidden="true" size={19} />
             </button>
           ) : null}
         </div>

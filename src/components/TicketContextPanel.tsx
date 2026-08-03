@@ -1,17 +1,32 @@
+import { ExternalLink } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import {
+  TicketImagesPanel,
+  type UploadedTicketImage,
+} from "@/components/TicketImagesPanel";
 import type { JiraTicketOption } from "@/lib/types";
 
 interface TicketContextPanelProps {
   ticket: JiraTicketOption | null;
   description: string;
   onDescriptionChange: (description: string) => void;
+  uploadedImages: UploadedTicketImage[];
+  excludedJiraImageIds: Set<string>;
+  onAddImageFiles: (files: File[]) => void;
+  onExcludeJiraImage: (attachmentId: string) => void;
+  onRemoveUploadedImage: (imageId: string) => void;
 }
 
 export function TicketContextPanel({
   ticket,
   description,
   onDescriptionChange,
+  uploadedImages,
+  excludedJiraImageIds,
+  onAddImageFiles,
+  onExcludeJiraImage,
+  onRemoveUploadedImage,
 }: TicketContextPanelProps) {
   const descriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -41,9 +56,21 @@ export function TicketContextPanel({
           <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
             Key
           </p>
-          <p className="mt-2 text-base font-semibold text-slate-50">
-            {ticket.key}
-          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <p className="text-base font-semibold text-slate-50">
+              {ticket.key}
+            </p>
+            <a
+              href={ticket.webUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-cyan-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              aria-label={`Open ${ticket.key} in Jira`}
+              title="Open in Jira"
+            >
+              <ExternalLink aria-hidden="true" size={16} />
+            </a>
+          </div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
@@ -112,6 +139,17 @@ export function TicketContextPanel({
           placeholder="Add requirements, acceptance criteria, and meeting notes."
         />
       </div>
+
+      <TicketImagesPanel
+        ticketKey={ticket.key}
+        jiraImages={(ticket.imageAttachments ?? []).filter(
+          (image) => !excludedJiraImageIds.has(image.id),
+        )}
+        uploadedImages={uploadedImages}
+        onAddFiles={onAddImageFiles}
+        onExcludeJiraImage={onExcludeJiraImage}
+        onRemoveUploadedImage={onRemoveUploadedImage}
+      />
     </div>
   );
 }

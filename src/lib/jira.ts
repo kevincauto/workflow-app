@@ -1,6 +1,7 @@
 import { mockJiraIssue } from "@/lib/mockData";
 import type {
   JiraCandidate,
+  JiraImageAttachment,
   JiraIssue,
   JiraSprintInfo,
   JiraTicketOption,
@@ -190,6 +191,14 @@ function getMockAssignedTickets(): ListAssignedJiraTicketsResponse {
           startDate: null,
           endDate: null,
         },
+        imageAttachments: [
+          {
+            id: "mock-ticket-image",
+            filename: "jira-story-reference.svg",
+            mimeType: "image/svg+xml",
+            size: null,
+          },
+        ],
       },
     ],
     source: "mock",
@@ -316,6 +325,14 @@ interface JiraSearchPayload {
   issues?: JiraSearchIssuePayload[];
 }
 
+interface JiraAttachmentPayload {
+  id?: string | number;
+  filename?: string;
+  mimeType?: string;
+  size?: number;
+  content?: string;
+}
+
 interface JiraFieldPayload {
   id?: string;
   name?: string;
@@ -352,6 +369,35 @@ function getFieldNumber(value: unknown) {
   }
 
   return null;
+}
+
+function normalizeImageAttachments(value: unknown): JiraImageAttachment[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+
+    const attachment = item as JiraAttachmentPayload;
+    const id = attachment.id === undefined ? "" : String(attachment.id);
+    const mimeType = attachment.mimeType?.trim() ?? "";
+
+    if (!id || !attachment.filename || !mimeType.startsWith("image/")) {
+      return [];
+    }
+
+    return [
+      {
+        id,
+        filename: attachment.filename,
+        mimeType,
+        size: typeof attachment.size === "number" ? attachment.size : null,
+      },
+    ];
+  });
 }
 
 function normalizeFieldName(value: string) {
@@ -535,6 +581,7 @@ function mapSearchIssue(
     estimatePoints,
     updatedAt: typeof fields.updated === "string" ? fields.updated : null,
     sprint: getIssueSprint(fields, sprintById),
+    imageAttachments: normalizeImageAttachments(fields.attachment),
   };
 }
 
@@ -600,6 +647,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
     getDeveloperFieldId() ?? getDeveloperJqlField(),
     ...estimateFieldIds,
     "updated",
+    "attachment",
     process.env.JIRA_SPRINT_FIELD_ID || "customfield_10020",
   ];
   let response: JiraSearchPayload | null = null;
@@ -636,6 +684,89 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
     source: "live",
     assignee: displayName,
     notices,
+  };
+}
+
+export async function getJiraImageAttachmentContent(
+  ticketKey: string,
+  attachmentId: string,
+) {
+  if (!isJiraConfigured()) {
+    if (
+      ticketKey !== mockJiraIssue.key ||
+      attachmentId !== "mock-ticket-image"
+    ) {
+      throw new Error("Jira image attachment was not found.");
+    }
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720"><rect width="1200" height="720" fill="#07111f"/><rect x="90" y="90" width="1020" height="540" rx="32" fill="#12343b" stroke="#67e8f9" stroke-width="6"/><text x="600" y="330" text-anchor="middle" font-family="sans-serif" font-size="54" fill="#f8fafc">Jira Story Reference</text><text x="600" y="410" text-anchor="middle" font-family="sans-serif" font-size="30" fill="#fdba74">Mock attached image</text></svg>`;
+
+    return {
+      data: new TextEncoder().encode(svg),
+      filename: "jira-story-reference.svg",
+      mimeType: "image/svg+xml",
+    };
+  }
+
+  let payload: { fields?: { attachment?: JiraAttachmentPayload[] } } | null =
+    null;
+  let lastError: Error | null = null;
+
+  for (const version of getJiraApiVersions()) {
+    try {
+      payload = await fetchJiraJson(
+        `/rest/api/${version}/issue/${encodeURIComponent(ticketKey)}?fields=attachment`,
+      );
+      break;
+    } catch (error) {
+      lastError =
+        error instanceof Error
+          ? error
+          : new Error("Unable to load Jira attachments.");
+    }
+  }
+
+  if (!payload) {
+    throw lastError ?? new Error("Unable to load Jira attachments.");
+  }
+
+  const attachment = payload.fields?.attachment?.find(
+    (candidate) => String(candidate.id) === attachmentId,
+  );
+
+  if (
+    !attachment?.content ||
+    !attachment.filename ||
+    !attachment.mimeType?.startsWith("image/")
+  ) {
+    throw new Error("Jira image attachment was not found.");
+  }
+
+  const contentUrl = new URL(attachment.content, getJiraBaseUrl());
+  const jiraUrl = new URL(getJiraBaseUrl());
+
+  if (contentUrl.origin !== jiraUrl.origin) {
+    throw new Error("Jira returned an invalid attachment URL.");
+  }
+
+  const response = await fetch(contentUrl, {
+    headers: {
+      Accept: attachment.mimeType,
+      Authorization: buildJiraAuthHeader(),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Jira attachment download failed with status ${response.status}.`,
+    );
+  }
+
+  return {
+    data: new Uint8Array(await response.arrayBuffer()),
+    filename: attachment.filename,
+    mimeType: attachment.mimeType,
   };
 }
 

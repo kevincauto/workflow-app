@@ -2,8 +2,11 @@ import { sanitizePackageName } from "@/lib/reviewPackage";
 import type {
   FigmaLayerNode,
   NormalizedFigmaContext,
+  PackageImage,
   TicketToCodePackageInput,
 } from "@/lib/types";
+
+export type TicketToCodePackageFiles = Record<string, string | Uint8Array>;
 
 function markdownText(value: string | null | undefined, fallback: string) {
   return value?.trim() ? value.trim() : fallback;
@@ -115,6 +118,42 @@ function buildFigmaMarkdown(figma: NormalizedFigmaContext | null) {
   ].join("\n");
 }
 
+function getFigmaFileNames(index: number) {
+  const position = index + 1;
+  return {
+    markdown: `figma-context-${position}.md`,
+    json: `figma-context-${position}.json`,
+  };
+}
+
+function getFileExtension(filename: string) {
+  const extension = filename.match(/\.([a-zA-Z0-9]{1,10})$/)?.[1];
+  return extension ? `.${extension.toLowerCase()}` : "";
+}
+
+function buildPackagedImages(images: PackageImage[]) {
+  const usedNames = new Set<string>();
+
+  return images.map((image, index) => {
+    const extension = getFileExtension(image.filename);
+    const filenameWithoutExtension = extension
+      ? image.filename.slice(0, -extension.length)
+      : image.filename;
+    const baseName =
+      sanitizePackageName(filenameWithoutExtension) || `image-${index + 1}`;
+    let packagedName = `${baseName}${extension}`;
+    let suffix = 2;
+
+    while (usedNames.has(packagedName)) {
+      packagedName = `${baseName}-${suffix}${extension}`;
+      suffix += 1;
+    }
+
+    usedNames.add(packagedName);
+    return { image, path: `images/${packagedName}` };
+  });
+}
+
 export function getTicketToCodePackageFolderName(
   input: TicketToCodePackageInput,
 ) {
@@ -125,19 +164,23 @@ export function getTicketToCodePackageFolderName(
 }
 
 export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
+  const packagedImages = buildPackagedImages(input.images);
+  const figmaFiles = input.figmaContexts.flatMap((_, index) => {
+    const names = getFigmaFileNames(index);
+    return [names.markdown, names.json];
+  });
+
   return {
-    packageVersion: 1,
+    packageVersion: 2,
     generatedAt: input.generatedAt,
     intendedUse:
       "Feature creation context package for an IDE coding agent. Use the edited ticket description as the source of truth, with optional normalized Figma context as visual guidance.",
     sourceSystems: {
       ticket:
         input.ticket.source === "live" ? "Jira REST API" : "Mock Jira data",
-      figma: input.figma
-        ? input.figma.source === "live"
-          ? "Figma REST API"
-          : "Mock Figma data"
-        : null,
+      figma: input.figmaContexts.map((figma) =>
+        figma.source === "live" ? "Figma REST API" : "Mock Figma data",
+      ),
     },
     ticket: {
       key: input.ticket.key,
@@ -151,28 +194,37 @@ export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
       updatedAt: input.ticket.updatedAt,
       sprint: input.ticket.sprint,
     },
-    figma: input.figma
-      ? {
-          fileKey: input.figma.fileKey,
-          nodeId: input.figma.nodeId,
-          fileName: input.figma.fileName,
-          selectedNodeName: input.figma.selectedNodeName,
-          selectedNodeType: input.figma.selectedNodeType,
-          previewImageUrl: input.figma.previewImageUrl,
-          detectedControlCount: input.figma.detectedControls.length,
-        }
-      : null,
+    images: packagedImages.map(({ image, path }) => ({
+      source: image.source,
+      originalFilename: image.filename,
+      packagedPath: path,
+      mimeType: image.mimeType,
+      size: image.size,
+      jiraAttachmentId: image.jiraAttachmentId,
+    })),
+    figma: input.figmaContexts.map((figma, index) => ({
+      ...getFigmaFileNames(index),
+      fileKey: figma.fileKey,
+      nodeId: figma.nodeId,
+      fileName: figma.fileName,
+      selectedNodeName: figma.selectedNodeName,
+      selectedNodeType: figma.selectedNodeType,
+      previewImageUrl: figma.previewImageUrl,
+      detectedControlCount: figma.detectedControls.length,
+    })),
     packageFiles: [
       "manifest.json",
       "ticket.md",
       "agent-prompt.md",
-      ...(input.figma ? ["figma-context.md", "figma-context.json"] : []),
+      ...figmaFiles,
+      ...packagedImages.map(({ path }) => path),
     ],
     knownConstraints: [
       "Access tokens are intentionally excluded from this package.",
       "The edited ticket description in ticket.md is the requirements source of truth.",
       "Figma context is normalized and intentionally compact; raw Figma payloads are excluded.",
       "Preview image URLs from Figma may expire or require access to the original file.",
+      "Jira and uploaded image binaries are stored under images/ and contain no credentials.",
     ],
   };
 }
@@ -197,6 +249,14 @@ export function buildTicketMarkdown(input: TicketToCodePackageInput) {
       "No ticket description was provided.",
     ),
     "",
+    "## Attached Images",
+    "",
+    input.images.length
+      ? buildPackagedImages(input.images)
+          .map(({ image, path }) => `- ${path} (${image.source})`)
+          .join("\n")
+      : "No images were attached to this package.",
+    "",
   ].join("\n");
 }
 
@@ -218,20 +278,35 @@ export function buildAgentPrompt(input: TicketToCodePackageInput) {
     "",
     "## Design Context",
     "",
-    input.figma
-      ? "Use `figma-context.md` and `figma-context.json` for visual guidance. Preserve layout direction, spacing, dimensions, text hierarchy, colors, border radii, detected control types, option counts, and option orientation where they map cleanly to the app's design system. If detected controls say radio-group, implement radio buttons, not a dropdown/select. Preserve vertical radio groups as vertical and horizontal radio groups as horizontal. Ask for human review when the Figma context is ambiguous or conflicts with existing UI conventions."
+    input.figmaContexts.length
+      ? `Use ${input.figmaContexts
+          .map((_, index) => {
+            const names = getFigmaFileNames(index);
+            return `\`${names.markdown}\` and \`${names.json}\``;
+          })
+          .join(
+            ", ",
+          )} for visual guidance. Preserve layout direction, spacing, dimensions, text hierarchy, colors, border radii, detected control types, option counts, and option orientation where they map cleanly to the app's design system. If detected controls say radio-group, implement radio buttons, not a dropdown/select. Preserve vertical radio groups as vertical and horizontal radio groups as horizontal. Ask for human review when the Figma context is ambiguous or conflicts with existing UI conventions.`
       : "No Figma context is attached. Follow existing app UI conventions and ask for human review when visual requirements are ambiguous.",
-    input.figma?.detectedControls.length
+    input.figmaContexts.some((figma) => figma.detectedControls.length)
       ? [
           "",
           "## Detected Control Checklist",
           "",
-          ...input.figma.detectedControls.map(
-            (control) =>
-              `- ${control.name}: ${control.controlType}, ${control.orientation}, ${control.optionCount} options. ${control.guidance}`,
+          ...input.figmaContexts.flatMap((figma, index) =>
+            figma.detectedControls.map(
+              (control) =>
+                `- Figma ${index + 1}, ${control.name}: ${control.controlType}, ${control.orientation}, ${control.optionCount} options. ${control.guidance}`,
+            ),
           ),
         ].join("\n")
       : "",
+    "",
+    "## Image References",
+    "",
+    input.images.length
+      ? "Inspect every file under `images/` as implementation context. Use the manifest to distinguish Jira attachments from session uploads."
+      : "No image references are attached.",
     "",
     "## Expected Agent Behavior",
     "",
@@ -245,20 +320,26 @@ export function buildAgentPrompt(input: TicketToCodePackageInput) {
   ].join("\n");
 }
 
-export function buildFigmaContextMarkdown(input: TicketToCodePackageInput) {
-  return buildFigmaMarkdown(input.figma);
+export function buildFigmaContextMarkdown(figma: NormalizedFigmaContext) {
+  return buildFigmaMarkdown(figma);
 }
 
 export function buildTicketToCodePackageFiles(input: TicketToCodePackageInput) {
-  return {
+  const files: TicketToCodePackageFiles = {
     "manifest.json": JSON.stringify(buildTicketToCodeManifest(input), null, 2),
     "ticket.md": buildTicketMarkdown(input),
     "agent-prompt.md": buildAgentPrompt(input),
-    ...(input.figma
-      ? {
-          "figma-context.md": buildFigmaContextMarkdown(input),
-          "figma-context.json": JSON.stringify(input.figma, null, 2),
-        }
-      : {}),
   };
+
+  input.figmaContexts.forEach((figma, index) => {
+    const names = getFigmaFileNames(index);
+    files[names.markdown] = buildFigmaContextMarkdown(figma);
+    files[names.json] = JSON.stringify(figma, null, 2);
+  });
+
+  for (const { image, path } of buildPackagedImages(input.images)) {
+    files[path] = image.data;
+  }
+
+  return files;
 }

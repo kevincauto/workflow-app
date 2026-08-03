@@ -18,6 +18,13 @@ export interface JiraIssue {
   source: "live" | "mock";
 }
 
+export interface JiraImageAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number | null;
+}
+
 export interface JiraSprintInfo {
   id: string;
   name: string;
@@ -35,6 +42,7 @@ export interface JiraTicketOption extends JiraIssue {
   estimatePoints: number | null;
   updatedAt: string | null;
   sprint: JiraSprintInfo | null;
+  imageAttachments: JiraImageAttachment[];
 }
 
 export interface ListAssignedJiraTicketsResponse {
@@ -135,11 +143,22 @@ export interface FigmaExtractResponse {
   figma: NormalizedFigmaContext;
 }
 
+export interface PackageImage {
+  id: string;
+  source: "jira" | "upload";
+  filename: string;
+  mimeType: string;
+  size: number;
+  data: Uint8Array;
+  jiraAttachmentId: string | null;
+}
+
 export interface TicketToCodePackageInput {
   generatedAt: string;
   ticket: JiraTicketOption;
   editedDescription: string;
-  figma: NormalizedFigmaContext | null;
+  figmaContexts: NormalizedFigmaContext[];
+  images: PackageImage[];
 }
 
 export interface JiraCandidate {

@@ -7,6 +7,7 @@ import { strToU8, zipSync } from "fflate";
 import { FigmaContextPanel } from "@/components/FigmaContextPanel";
 import { SectionCard } from "@/components/SectionCard";
 import { TicketContextPanel } from "@/components/TicketContextPanel";
+import type { UploadedTicketImage } from "@/components/TicketImagesPanel";
 import { TicketSelector } from "@/components/TicketSelector";
 import {
   buildTicketToCodePackageFiles,
@@ -17,8 +18,20 @@ import type {
   JiraTicketOption,
   ListAssignedJiraTicketsResponse,
   NormalizedFigmaContext,
+  PackageImage,
   TicketToCodePackageInput,
 } from "@/lib/types";
+
+interface FigmaContextSlot {
+  id: string;
+  url: string;
+  figma: NormalizedFigmaContext | null;
+  loading: boolean;
+}
+
+function createFigmaSlot(id: string): FigmaContextSlot {
+  return { id, url: "", figma: null, loading: false };
+}
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { cache: "no-store" });
@@ -52,18 +65,36 @@ export function TicketToCodeDashboard() {
   const [tickets, setTickets] = useState<JiraTicketOption[]>([]);
   const [selectedTicketKey, setSelectedTicketKey] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
-  const [figmaUrl, setFigmaUrl] = useState("");
-  const [figma, setFigma] = useState<NormalizedFigmaContext | null>(null);
+  const [figmaSlots, setFigmaSlots] = useState<FigmaContextSlot[]>([
+    createFigmaSlot("figma-1"),
+  ]);
+  const [uploadedImages, setUploadedImages] = useState<UploadedTicketImage[]>(
+    [],
+  );
+  const [excludedJiraImageIds, setExcludedJiraImageIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingTickets, setLoadingTickets] = useState(false);
-  const [loadingFigma, setLoadingFigma] = useState(false);
+  const [downloadingPackage, setDownloadingPackage] = useState(false);
   const selectedTicketKeyRef = useRef("");
+  const uploadedImagesRef = useRef<UploadedTicketImage[]>([]);
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.key === selectedTicketKey) ?? null,
     [selectedTicketKey, tickets],
   );
+
+  const clearTicketImages = useCallback(() => {
+    for (const image of uploadedImagesRef.current) {
+      URL.revokeObjectURL(image.previewUrl);
+    }
+
+    uploadedImagesRef.current = [];
+    setUploadedImages([]);
+    setExcludedJiraImageIds(new Set());
+  }, []);
 
   const loadTickets = useCallback(async () => {
     setError(null);
@@ -84,6 +115,7 @@ export function TicketToCodeDashboard() {
         selectedTicketKeyRef.current = "";
         setSelectedTicketKey("");
         setEditedDescription("");
+        clearTicketImages();
       }
     } catch (requestError) {
       setError(
@@ -94,7 +126,7 @@ export function TicketToCodeDashboard() {
     } finally {
       setLoadingTickets(false);
     }
-  }, []);
+  }, [clearTicketImages]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -104,24 +136,92 @@ export function TicketToCodeDashboard() {
     return () => window.clearTimeout(timeoutId);
   }, [loadTickets]);
 
+  useEffect(
+    () => () => {
+      for (const image of uploadedImagesRef.current) {
+        URL.revokeObjectURL(image.previewUrl);
+      }
+    },
+    [],
+  );
+
   function handleSelectTicket(key: string) {
     const ticket = tickets.find((candidate) => candidate.key === key) ?? null;
 
     selectedTicketKeyRef.current = key;
     setSelectedTicketKey(key);
     setEditedDescription(ticket?.description ?? "");
+    clearTicketImages();
   }
 
-  async function handleExtractFigma() {
+  function handleAddImageFiles(files: File[]) {
+    setUploadedImages((current) => {
+      const signatures = new Set(
+        current.map(
+          (image) =>
+            `${image.file.name}:${image.file.size}:${image.file.lastModified}:${image.file.type}`,
+        ),
+      );
+      const additions = files.flatMap((file) => {
+        const signature = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+
+        if (signatures.has(signature)) {
+          return [];
+        }
+
+        signatures.add(signature);
+        return [
+          {
+            id: crypto.randomUUID(),
+            file,
+            previewUrl: URL.createObjectURL(file),
+          },
+        ];
+      });
+      const next = [...current, ...additions];
+      uploadedImagesRef.current = next;
+      return next;
+    });
+  }
+
+  function handleRemoveUploadedImage(imageId: string) {
+    setUploadedImages((current) => {
+      const removed = current.find((image) => image.id === imageId);
+      if (removed) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+
+      const next = current.filter((image) => image.id !== imageId);
+      uploadedImagesRef.current = next;
+      return next;
+    });
+  }
+
+  async function handleExtractFigma(slotId: string) {
+    const slot = figmaSlots.find((candidate) => candidate.id === slotId);
+    if (!slot) {
+      return;
+    }
+
     setError(null);
-    setLoadingFigma(true);
+    setFigmaSlots((current) =>
+      current.map((candidate) =>
+        candidate.id === slotId ? { ...candidate, loading: true } : candidate,
+      ),
+    );
 
     try {
       const response = await postJson<FigmaExtractResponse>(
         "/api/figma/extract",
-        { url: figmaUrl },
+        { url: slot.url },
       );
-      setFigma(response.figma);
+      setFigmaSlots((current) =>
+        current.map((candidate) =>
+          candidate.id === slotId
+            ? { ...candidate, figma: response.figma }
+            : candidate,
+        ),
+      );
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -129,46 +229,120 @@ export function TicketToCodeDashboard() {
           : "Unable to extract Figma context.",
       );
     } finally {
-      setLoadingFigma(false);
+      setFigmaSlots((current) =>
+        current.map((candidate) =>
+          candidate.id === slotId
+            ? { ...candidate, loading: false }
+            : candidate,
+        ),
+      );
     }
   }
 
-  function handleClearFigma() {
-    setFigma(null);
+  function updateFigmaSlot(
+    slotId: string,
+    update: Partial<Pick<FigmaContextSlot, "url" | "figma">>,
+  ) {
+    setFigmaSlots((current) =>
+      current.map((slot) =>
+        slot.id === slotId ? { ...slot, ...update } : slot,
+      ),
+    );
   }
 
-  function handleDownloadPackage() {
+  async function handleDownloadPackage() {
     if (!selectedTicket) {
       return;
     }
 
     setError(null);
+    setDownloadingPackage(true);
 
-    const packageInput: TicketToCodePackageInput = {
-      generatedAt: new Date().toISOString(),
-      ticket: selectedTicket,
-      editedDescription,
-      figma,
-    };
-    const folderName = getTicketToCodePackageFolderName(packageInput);
-    const packageFiles = buildTicketToCodePackageFiles(packageInput);
-    const zipEntries: Record<string, Uint8Array> = {};
+    try {
+      const jiraImages = selectedTicket.imageAttachments.filter(
+        (image) => !excludedJiraImageIds.has(image.id),
+      );
+      const packagedJiraImages = await Promise.all(
+        jiraImages.map(async (image): Promise<PackageImage> => {
+          const response = await fetch(
+            `/api/jira/attachments/${encodeURIComponent(selectedTicket.key)}/${encodeURIComponent(image.id)}`,
+            { cache: "no-store" },
+          );
 
-    for (const [fileName, content] of Object.entries(packageFiles)) {
-      zipEntries[`${folderName}/${fileName}`] = strToU8(content);
+          if (!response.ok) {
+            const payload = (await response.json().catch(() => null)) as {
+              error?: string;
+            } | null;
+            throw new Error(
+              payload?.error || `Unable to download ${image.filename}.`,
+            );
+          }
+
+          const data = new Uint8Array(await response.arrayBuffer());
+          return {
+            id: `jira-${image.id}`,
+            source: "jira",
+            filename: image.filename,
+            mimeType: image.mimeType,
+            size: data.byteLength,
+            data,
+            jiraAttachmentId: image.id,
+          };
+        }),
+      );
+      const packagedUploads = await Promise.all(
+        uploadedImages.map(async (image): Promise<PackageImage> => {
+          const data = new Uint8Array(await image.file.arrayBuffer());
+          return {
+            id: image.id,
+            source: "upload",
+            filename: image.file.name,
+            mimeType: image.file.type,
+            size: data.byteLength,
+            data,
+            jiraAttachmentId: null,
+          };
+        }),
+      );
+
+      const packageInput: TicketToCodePackageInput = {
+        generatedAt: new Date().toISOString(),
+        ticket: selectedTicket,
+        editedDescription,
+        figmaContexts: figmaSlots.flatMap((slot) =>
+          slot.figma ? [slot.figma] : [],
+        ),
+        images: [...packagedJiraImages, ...packagedUploads],
+      };
+      const folderName = getTicketToCodePackageFolderName(packageInput);
+      const packageFiles = buildTicketToCodePackageFiles(packageInput);
+      const zipEntries: Record<string, Uint8Array> = {};
+
+      for (const [fileName, content] of Object.entries(packageFiles)) {
+        zipEntries[`${folderName}/${fileName}`] =
+          typeof content === "string" ? strToU8(content) : content;
+      }
+
+      const zipData = zipSync(zipEntries);
+      const blob = new Blob([zipData], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${folderName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (packageError) {
+      setError(
+        packageError instanceof Error
+          ? packageError.message
+          : "Unable to download AI packaged info.",
+      );
+    } finally {
+      setDownloadingPackage(false);
     }
-
-    const zipData = zipSync(zipEntries);
-    const blob = new Blob([zipData], { type: "application/zip" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = `${folderName}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
   }
 
   return (
@@ -235,18 +409,53 @@ export function TicketToCodeDashboard() {
             ticket={selectedTicket}
             description={editedDescription}
             onDescriptionChange={setEditedDescription}
+            uploadedImages={uploadedImages}
+            excludedJiraImageIds={excludedJiraImageIds}
+            onAddImageFiles={handleAddImageFiles}
+            onExcludeJiraImage={(attachmentId) =>
+              setExcludedJiraImageIds((current) =>
+                new Set(current).add(attachmentId),
+              )
+            }
+            onRemoveUploadedImage={handleRemoveUploadedImage}
           />
         </SectionCard>
 
         <SectionCard title="Figma Context" eyebrow="Optional Design Source">
-          <FigmaContextPanel
-            figmaUrl={figmaUrl}
-            figma={figma}
-            loading={loadingFigma}
-            onUrlChange={setFigmaUrl}
-            onExtract={handleExtractFigma}
-            onClear={handleClearFigma}
-          />
+          <div className="space-y-6">
+            {figmaSlots.map((slot, index) => (
+              <div
+                key={slot.id}
+                className={index ? "border-t border-white/10 pt-6" : undefined}
+              >
+                <FigmaContextPanel
+                  label={`Figma Context ${index + 1}`}
+                  figmaUrl={slot.url}
+                  figma={slot.figma}
+                  loading={slot.loading}
+                  canAdd={
+                    index === 0 && Boolean(slot.figma) && figmaSlots.length < 2
+                  }
+                  removable={index > 0}
+                  onUrlChange={(url) => updateFigmaSlot(slot.id, { url })}
+                  onExtract={() => void handleExtractFigma(slot.id)}
+                  onClear={() => updateFigmaSlot(slot.id, { figma: null })}
+                  onAdd={() =>
+                    setFigmaSlots((current) =>
+                      current.length < 2
+                        ? [...current, createFigmaSlot("figma-2")]
+                        : current,
+                    )
+                  }
+                  onRemove={() =>
+                    setFigmaSlots((current) =>
+                      current.filter((candidate) => candidate.id !== slot.id),
+                    )
+                  }
+                />
+              </div>
+            ))}
+          </div>
         </SectionCard>
 
         <SectionCard
@@ -255,15 +464,17 @@ export function TicketToCodeDashboard() {
           actions={
             <button
               type="button"
-              onClick={handleDownloadPackage}
-              disabled={!selectedTicket}
+              onClick={() => void handleDownloadPackage()}
+              disabled={!selectedTicket || downloadingPackage}
               className="rounded-2xl bg-orange-300 px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_18px_44px_rgba(251,146,60,0.28)] transition hover:bg-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Download AI Packaged Info
+              {downloadingPackage
+                ? "Packaging..."
+                : "Download AI Packaged Info"}
             </button>
           }
         >
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
                 Ticket
@@ -285,7 +496,17 @@ export function TicketToCodeDashboard() {
                 Figma
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
-                {figma ? "Attached" : "Not attached"}
+                {figmaSlots.filter((slot) => slot.figma).length} of 2
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+                Images
+              </p>
+              <p className="mt-2 text-base font-semibold text-slate-50">
+                {(selectedTicket?.imageAttachments.length ?? 0) -
+                  excludedJiraImageIds.size +
+                  uploadedImages.length}
               </p>
             </div>
           </div>
