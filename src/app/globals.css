@@ -3,8 +3,10 @@
 :root {
   --background: #07111f;
   --foreground: #f8fafc;
+  --font-display: "Avenir Next", Avenir, "Century Gothic", sans-serif;
+  --font-code: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --font-sans: var(--font-display);
-  --font-mono: var(--font-mono);
+  --font-mono: var(--font-code);
 }
 
 * {
@@ -31,7 +33,7 @@ textarea {
 
 pre,
 code {
-  font-family: var(--font-mono), monospace;
+  font-family: var(--font-code);
 }
 
 ::selection {

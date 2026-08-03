@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import {
@@ -41,6 +41,14 @@ export function TicketContextPanel({
     }
   }, [description]);
 
+  async function copyTicketKey() {
+    if (!ticket) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(ticket.key);
+  }
+
   if (!ticket) {
     return (
       <div className="rounded-2xl border border-dashed border-white/20 bg-slate-950/25 p-4 text-sm text-slate-200">
@@ -70,6 +78,15 @@ export function TicketContextPanel({
             >
               <ExternalLink aria-hidden="true" size={16} />
             </a>
+            <button
+              type="button"
+              onClick={() => void copyTicketKey()}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-cyan-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              aria-label={`Copy Jira key ${ticket.key}`}
+              title="Copy Jira key"
+            >
+              <Copy aria-hidden="true" size={16} />
+            </button>
           </div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
