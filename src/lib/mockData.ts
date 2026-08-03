@@ -168,6 +168,7 @@ export const mockJiraIssue: JiraIssue = {
   summary: "Handle missing account id on customer profile routes",
   description:
     "Acceptance criteria:\n- Do not call the customer profile API when the account id route segment is missing.\n- Show a recoverable empty state instead of a broken loading screen.\n- Add regression coverage for short route paths.",
+  webUrl: "https://jira.example.com/browse/CP2-1936",
   source: "mock",
 };
 

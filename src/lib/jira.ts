@@ -137,6 +137,21 @@ function getJiraBaseUrl() {
   return baseUrl.replace(/\/+$/, "");
 }
 
+function getJiraIssueWebUrl(key: string) {
+  return `${getJiraBaseUrl()}/browse/${encodeURIComponent(key)}`;
+}
+
+function getMockJiraIssue(key: string): JiraIssue {
+  return {
+    ...mockJiraIssue,
+    key,
+    webUrl: mockJiraIssue.webUrl.replace(
+      /\/browse\/[^/]+$/,
+      `/browse/${encodeURIComponent(key)}`,
+    ),
+  };
+}
+
 async function fetchJiraJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${getJiraBaseUrl()}${path}`, {
     ...init,
@@ -510,6 +525,7 @@ function mapSearchIssue(
     description:
       flattenJiraDescription(fields.description) ||
       "No Jira description available.",
+    webUrl: getJiraIssueWebUrl(issue.key),
     source: "live",
     status: getFieldString(fields.status),
     priority: getFieldString(fields.priority),
@@ -625,7 +641,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
 export async function resolveJiraIssue(key: string): Promise<JiraIssue> {
   if (!isJiraConfigured()) {
-    return { ...mockJiraIssue, key };
+    return getMockJiraIssue(key);
   }
 
   const authHeader = buildJiraAuthHeader();
@@ -674,6 +690,7 @@ export async function resolveJiraIssue(key: string): Promise<JiraIssue> {
     description:
       flattenJiraDescription(payload.fields?.description) ||
       "No Jira description available.",
+    webUrl: getJiraIssueWebUrl(payload.key),
     source: "live",
   };
 }

@@ -14,6 +14,7 @@ export interface JiraIssue {
   key: string;
   summary: string;
   description: string;
+  webUrl: string;
   source: "live" | "mock";
 }
 

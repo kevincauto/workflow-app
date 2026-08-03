@@ -62,9 +62,41 @@ export function JiraPanel({
 
       {jiraIssue ? (
         <div className="rounded-2xl border border-emerald-300/25 bg-slate-950/45 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
-            {jiraIssue.key}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
+              {jiraIssue.key}
+            </p>
+            <a
+              href={jiraIssue.webUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-300/10 text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-300/20 focus:outline-none focus:ring-2 focus:ring-emerald-300/70"
+              aria-label={`Open Jira ticket ${jiraIssue.key}`}
+              title="Open Jira ticket"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="h-4 w-4"
+              >
+                <path
+                  d="M8.5 5.5H5.75A1.75 1.75 0 0 0 4 7.25v7A1.75 1.75 0 0 0 5.75 16h7a1.75 1.75 0 0 0 1.75-1.75V11.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M11 4h5v5M9 11l6.5-6.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
+          </div>
           <h3 className="mt-2 text-base font-semibold text-slate-50">
             {jiraIssue.summary}
           </h3>

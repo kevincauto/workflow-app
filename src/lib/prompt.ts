@@ -72,7 +72,7 @@ export function buildReviewPrompt(input: {
   return `You are reviewing a GitLab merge request like a strong senior engineer.
 Focus on correctness, logic, security, error handling, tests, Jira requirement alignment, maintainability, and performance.
 Avoid style-only comments, formatting comments, and speculative comments.
-Prefer 3 to 7 strong findings and never exceed 10. Try to produce at least 1 finding.
+Prefer 1 to 7 strong findings. Never exceed 10 findings. Try to produce at least 1 finding but don't force it - 0 findings is ok.
 Do not infer that a file is empty, missing, or broken when the review payload explicitly marks its diff or content as unavailable, collapsed, or too large.
 Use this severity rubric consistently:
 - High: likely production incident, security exposure, data loss/corruption, auth/permission bypass, or a critical-path behavior that should block merge.
