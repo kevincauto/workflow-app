@@ -14,6 +14,7 @@ import { ReviewControls } from "@/components/ReviewControls";
 import { ReviewSummary } from "@/components/ReviewSummary";
 import { SectionCard } from "@/components/SectionCard";
 import {
+  buildReviewPackageAgentPrompt,
   buildReviewPackageManifest,
   buildReviewPackagePatch,
   buildReviewPackageSummary,
@@ -281,6 +282,9 @@ export function ReviewDashboard() {
       ),
       [`${folderName}/summary.md`]: strToU8(
         buildReviewPackageSummary(packageInput),
+      ),
+      [`${folderName}/agent-prompt.md`]: strToU8(
+        buildReviewPackageAgentPrompt(packageInput),
       ),
     });
 
