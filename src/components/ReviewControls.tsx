@@ -50,7 +50,7 @@ export function ReviewControls({
           type="button"
           onClick={handleGenerate}
           disabled={loading || !canGenerate}
-          className="min-h-13 rounded-2xl border border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          className="min-h-13 w-48 rounded-2xl border border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           <span aria-live="polite" className="inline-block w-full text-center">
             {buttonLabel}
