@@ -52,6 +52,16 @@ const workflowApps: WorkflowApp[] = [
     accent: "from-emerald-400 to-teal-600",
     active: true,
   },
+  {
+    name: "Are All Threads Resolved?",
+    description:
+      "Verify every GitLab discussion against the current code and check the merge request for remaining issues or regressions.",
+    href: "/are-all-threads-resolved",
+    action: "Verify Feedback",
+    status: "Ready",
+    accent: "from-amber-400 to-rose-500",
+    active: true,
+  },
 ];
 
 export default function Home() {
@@ -63,7 +73,7 @@ export default function Home() {
   ).length;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.22),transparent_24%),radial-gradient(circle_at_84%_10%,rgba(168,85,247,0.18),transparent_22%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.16),transparent_26%),linear-gradient(145deg,#020617_0%,#0f172a_46%,#111827_100%)] px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.32),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(168,85,247,0.26),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.24),transparent_28%),linear-gradient(145deg,#202c40_0%,#324158_46%,#2a384d_100%)] px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <header className="rounded-lg border border-white/12 bg-slate-950/55 px-5 py-5 shadow-[0_28px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:px-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -123,7 +133,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {workflowApps.map((app) => (
               <article
                 key={app.name}

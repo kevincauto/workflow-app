@@ -338,6 +338,25 @@ export interface PeerReviewFixesPackageInput {
   comments: MergeRequestComment[];
 }
 
+export type MergeRequestThreadStatus =
+  | "resolved"
+  | "unresolved"
+  | "not-resolvable";
+
+export interface MergeRequestThread {
+  discussionId: string;
+  comments: MergeRequestComment[];
+  filePath: string | null;
+  lineNumber: number | null;
+  status: MergeRequestThreadStatus;
+}
+
+export interface ThreadResolutionPackageInput {
+  generatedAt: string;
+  mergeRequest: MergeRequestContext;
+  comments: MergeRequestComment[];
+}
+
 export interface ReviewRequestPayload {
   mergeRequest: MergeRequestContext;
   jiraIssue: JiraIssue | null;
