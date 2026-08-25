@@ -1,6 +1,6 @@
-# Merge Medic AI
+# Workflow App
 
-Merge Medic AI accepts a GitLab merge request URL or an open merge request selected from a project-scoped dropdown, loads merge request metadata and diffs, detects Jira keys, retrieves Jira issue context, generates structured review findings, lets the user edit and approve those findings, and posts approved comments back to GitLab.
+Built from Merge Medic AI. Merge Medic AI accepts a GitLab merge request URL or an open merge request selected from a project-scoped dropdown, loads merge request metadata and diffs, detects Jira keys, retrieves Jira issue context, generates structured review findings, lets the user edit and approve those findings, and posts approved comments back to GitLab.
 
 ## Stack
 
