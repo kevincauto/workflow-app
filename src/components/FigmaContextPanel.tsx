@@ -1,42 +1,37 @@
 "use client";
 
-import { Plus, Trash2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useState } from "react";
 
-import type { NormalizedFigmaContext } from "@/lib/types";
+import type { FigmaViewport, NormalizedFigmaContext } from "@/lib/types";
 
 const minZoom = 0.5;
 const maxZoom = 4;
 const zoomStep = 0.25;
 
 interface FigmaContextPanelProps {
-  label: string;
+  viewport: FigmaViewport;
   figmaUrl: string;
   figma: NormalizedFigmaContext | null;
   loading: boolean;
-  canAdd: boolean;
-  removable: boolean;
+  error: string | null;
   onUrlChange: (url: string) => void;
   onExtract: () => void;
   onClear: () => void;
-  onAdd: () => void;
-  onRemove: () => void;
 }
 
 export function FigmaContextPanel({
-  label,
+  viewport,
   figmaUrl,
   figma,
   loading,
-  canAdd,
-  removable,
+  error,
   onUrlChange,
   onExtract,
   onClear,
-  onAdd,
-  onRemove,
 }: FigmaContextPanelProps) {
   const [previewZoom, setPreviewZoom] = useState(1);
+  const label = viewport === "desktop" ? "Desktop View" : "Mobile View";
 
   function updatePreviewZoom(nextZoom: number) {
     setPreviewZoom(Math.min(maxZoom, Math.max(minZoom, nextZoom)));
@@ -45,41 +40,18 @@ export function FigmaContextPanel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100">
           {label}
         </p>
-        <div className="flex gap-2">
-          {canAdd ? (
-            <button
-              type="button"
-              onClick={onAdd}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-300/40 text-cyan-100 transition hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-              aria-label="Add second Figma context"
-              title="Add Figma context"
-            >
-              <Plus aria-hidden="true" size={19} />
-            </button>
-          ) : null}
-          {removable ? (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-rose-300/25 text-rose-200 transition hover:bg-rose-400/10 focus:outline-none focus:ring-2 focus:ring-rose-300"
-              aria-label={`Remove ${label}`}
-              title="Remove Figma context"
-            >
-              <Trash2 aria-hidden="true" size={18} />
-            </button>
-          ) : null}
-        </div>
       </div>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <input
           type="url"
           value={figmaUrl}
           onChange={(event) => onUrlChange(event.target.value)}
-          placeholder="Paste a Figma file or selected-node URL"
-          className="min-h-12 flex-1 rounded-2xl border border-white/15 bg-slate-950/60 px-4 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+          placeholder={`Paste the ${label.toLowerCase()} Figma URL`}
+          aria-label={`${label} Figma URL`}
+          className="min-h-12 flex-1 rounded-xl border border-emerald-200/30 bg-[#07111f] px-4 text-sm text-white shadow-inner outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/30"
         />
         <div className="flex gap-3">
           <button
@@ -89,9 +61,9 @@ export function FigmaContextPanel({
               onExtract();
             }}
             disabled={loading || !figmaUrl.trim()}
-            className="rounded-2xl border border-cyan-300/50 bg-slate-950/25 px-4 py-3 text-sm font-semibold text-cyan-50 transition hover:bg-slate-950/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-2xl border border-emerald-300/50 bg-slate-950/25 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-slate-950/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Extracting..." : "Extract Figma Context"}
+            {loading ? `Extracting ${label}...` : `Extract ${label}`}
           </button>
           {figma ? (
             <button
@@ -100,7 +72,7 @@ export function FigmaContextPanel({
                 setPreviewZoom(1);
                 onClear();
               }}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-white/15 bg-slate-950/25 text-slate-100 transition hover:bg-slate-950/40 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-white/15 bg-slate-950/25 text-slate-100 transition hover:bg-slate-950/40 focus:outline-none focus:ring-2 focus:ring-emerald-300"
               aria-label={`Clear extracted ${label}`}
               title="Clear extracted context"
             >
@@ -110,13 +82,22 @@ export function FigmaContextPanel({
         </div>
       </div>
 
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-300/30 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-100"
+        >
+          {error}
+        </p>
+      ) : null}
+
       {figma ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="overflow-hidden rounded-2xl border border-white/15 bg-slate-950/45">
             {figma.previewImageUrl ? (
               <div>
                 <div className="flex flex-col gap-3 border-b border-white/10 bg-slate-950/55 p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100">
                     Preview {Math.round(previewZoom * 100)}%
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -159,7 +140,7 @@ export function FigmaContextPanel({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={figma.previewImageUrl}
-                      alt={figma.selectedNodeName}
+                      alt={`${label}: ${figma.selectedNodeName}`}
                       className="w-full max-w-none select-none rounded-xl border border-white/10 bg-white/5"
                     />
                   </div>
@@ -173,8 +154,8 @@ export function FigmaContextPanel({
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
+            <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <p className="text-xs uppercase tracking-[0.18em] text-emerald-200">
                 {figma.fileName}
               </p>
               <h3 className="mt-2 text-base font-semibold text-slate-50">
@@ -187,8 +168,8 @@ export function FigmaContextPanel({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+              <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
                   Layout
                 </p>
                 <p className="mt-2 text-sm text-slate-100">
@@ -198,8 +179,8 @@ export function FigmaContextPanel({
                   Spacing: {figma.layout.itemSpacing ?? "Unknown"}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+              <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
                   Tokens
                 </p>
                 <p className="mt-2 text-sm text-slate-100">
@@ -212,8 +193,8 @@ export function FigmaContextPanel({
             </div>
 
             {figma.colors.length ? (
-              <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+              <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
                   Colors
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -237,8 +218,8 @@ export function FigmaContextPanel({
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/20 bg-slate-950/25 p-4 text-sm text-slate-200">
-          Figma context is optional for the generated AI package.
+        <div className="rounded-2xl border border-dashed border-emerald-200/35 bg-white/[0.07] p-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          {label} Figma context is optional for the generated AI package.
         </div>
       )}
     </div>

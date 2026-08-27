@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { strToU8, zipSync } from "fflate";
 
+import {
+  AttachedFilesPanel,
+  type UploadedTicketAttachment,
+} from "@/components/AttachedFilesPanel";
 import { FigmaContextPanel } from "@/components/FigmaContextPanel";
 import { SectionCard } from "@/components/SectionCard";
 import { TicketContextPanel } from "@/components/TicketContextPanel";
-import type { UploadedTicketImage } from "@/components/TicketImagesPanel";
 import { TicketSelector } from "@/components/TicketSelector";
 import {
   buildTicketToCodePackageFiles,
@@ -15,22 +18,32 @@ import {
 } from "@/lib/ticketToCodePackage";
 import type {
   FigmaExtractResponse,
+  FigmaViewport,
   JiraTicketOption,
   ListAssignedJiraTicketsResponse,
   NormalizedFigmaContext,
-  PackageImage,
+  PackageAttachment,
   TicketToCodePackageInput,
 } from "@/lib/types";
 
 interface FigmaContextSlot {
   id: string;
+  viewport: FigmaViewport;
   url: string;
   figma: NormalizedFigmaContext | null;
   loading: boolean;
+  error: string | null;
 }
 
-function createFigmaSlot(id: string): FigmaContextSlot {
-  return { id, url: "", figma: null, loading: false };
+function createFigmaSlot(viewport: FigmaViewport): FigmaContextSlot {
+  return {
+    id: `figma-${viewport}`,
+    viewport,
+    url: "",
+    figma: null,
+    loading: false,
+    error: null,
+  };
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -66,34 +79,39 @@ export function TicketToCodeDashboard() {
   const [selectedTicketKey, setSelectedTicketKey] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [figmaSlots, setFigmaSlots] = useState<FigmaContextSlot[]>([
-    createFigmaSlot("figma-1"),
+    createFigmaSlot("desktop"),
+    createFigmaSlot("mobile"),
   ]);
-  const [uploadedImages, setUploadedImages] = useState<UploadedTicketImage[]>(
-    [],
-  );
-  const [excludedJiraImageIds, setExcludedJiraImageIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [uploadedAttachments, setUploadedAttachments] = useState<
+    UploadedTicketAttachment[]
+  >([]);
+  const [excludedJiraAttachmentIds, setExcludedJiraAttachmentIds] = useState<
+    Set<string>
+  >(new Set());
+  const [jiraAttachmentExplanations, setJiraAttachmentExplanations] = useState<
+    Record<string, string>
+  >({});
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [downloadingPackage, setDownloadingPackage] = useState(false);
   const selectedTicketKeyRef = useRef("");
-  const uploadedImagesRef = useRef<UploadedTicketImage[]>([]);
+  const uploadedAttachmentsRef = useRef<UploadedTicketAttachment[]>([]);
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.key === selectedTicketKey) ?? null,
     [selectedTicketKey, tickets],
   );
 
-  const clearTicketImages = useCallback(() => {
-    for (const image of uploadedImagesRef.current) {
-      URL.revokeObjectURL(image.previewUrl);
+  const clearTicketAttachments = useCallback(() => {
+    for (const attachment of uploadedAttachmentsRef.current) {
+      URL.revokeObjectURL(attachment.previewUrl);
     }
 
-    uploadedImagesRef.current = [];
-    setUploadedImages([]);
-    setExcludedJiraImageIds(new Set());
+    uploadedAttachmentsRef.current = [];
+    setUploadedAttachments([]);
+    setExcludedJiraAttachmentIds(new Set());
+    setJiraAttachmentExplanations({});
   }, []);
 
   const loadTickets = useCallback(async () => {
@@ -115,7 +133,7 @@ export function TicketToCodeDashboard() {
         selectedTicketKeyRef.current = "";
         setSelectedTicketKey("");
         setEditedDescription("");
-        clearTicketImages();
+        clearTicketAttachments();
       }
     } catch (requestError) {
       setError(
@@ -126,7 +144,7 @@ export function TicketToCodeDashboard() {
     } finally {
       setLoadingTickets(false);
     }
-  }, [clearTicketImages]);
+  }, [clearTicketAttachments]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -138,8 +156,8 @@ export function TicketToCodeDashboard() {
 
   useEffect(
     () => () => {
-      for (const image of uploadedImagesRef.current) {
-        URL.revokeObjectURL(image.previewUrl);
+      for (const attachment of uploadedAttachmentsRef.current) {
+        URL.revokeObjectURL(attachment.previewUrl);
       }
     },
     [],
@@ -151,11 +169,11 @@ export function TicketToCodeDashboard() {
     selectedTicketKeyRef.current = key;
     setSelectedTicketKey(key);
     setEditedDescription(ticket?.description ?? "");
-    clearTicketImages();
+    clearTicketAttachments();
   }
 
-  function handleAddImageFiles(files: File[]) {
-    setUploadedImages((current) => {
+  function handleAddAttachmentFiles(files: File[]) {
+    setUploadedAttachments((current) => {
       const signatures = new Set(
         current.map(
           (image) =>
@@ -175,24 +193,44 @@ export function TicketToCodeDashboard() {
             id: crypto.randomUUID(),
             file,
             previewUrl: URL.createObjectURL(file),
+            explanation: "",
           },
         ];
       });
       const next = [...current, ...additions];
-      uploadedImagesRef.current = next;
+      uploadedAttachmentsRef.current = next;
       return next;
     });
   }
 
-  function handleRemoveUploadedImage(imageId: string) {
-    setUploadedImages((current) => {
-      const removed = current.find((image) => image.id === imageId);
+  function handleRemoveUploadedAttachment(attachmentId: string) {
+    setUploadedAttachments((current) => {
+      const removed = current.find(
+        (attachment) => attachment.id === attachmentId,
+      );
       if (removed) {
         URL.revokeObjectURL(removed.previewUrl);
       }
 
-      const next = current.filter((image) => image.id !== imageId);
-      uploadedImagesRef.current = next;
+      const next = current.filter(
+        (attachment) => attachment.id !== attachmentId,
+      );
+      uploadedAttachmentsRef.current = next;
+      return next;
+    });
+  }
+
+  function updateUploadedAttachmentExplanation(
+    attachmentId: string,
+    explanation: string,
+  ) {
+    setUploadedAttachments((current) => {
+      const next = current.map((attachment) =>
+        attachment.id === attachmentId
+          ? { ...attachment, explanation }
+          : attachment,
+      );
+      uploadedAttachmentsRef.current = next;
       return next;
     });
   }
@@ -206,7 +244,9 @@ export function TicketToCodeDashboard() {
     setError(null);
     setFigmaSlots((current) =>
       current.map((candidate) =>
-        candidate.id === slotId ? { ...candidate, loading: true } : candidate,
+        candidate.id === slotId
+          ? { ...candidate, loading: true, error: null }
+          : candidate,
       ),
     );
 
@@ -218,15 +258,21 @@ export function TicketToCodeDashboard() {
       setFigmaSlots((current) =>
         current.map((candidate) =>
           candidate.id === slotId
-            ? { ...candidate, figma: response.figma }
+            ? { ...candidate, figma: response.figma, error: null }
             : candidate,
         ),
       );
     } catch (requestError) {
-      setError(
+      const message =
         requestError instanceof Error
           ? requestError.message
-          : "Unable to extract Figma context.",
+          : "Unable to extract Figma context.";
+      setFigmaSlots((current) =>
+        current.map((candidate) =>
+          candidate.id === slotId
+            ? { ...candidate, error: message }
+            : candidate,
+        ),
       );
     } finally {
       setFigmaSlots((current) =>
@@ -241,7 +287,7 @@ export function TicketToCodeDashboard() {
 
   function updateFigmaSlot(
     slotId: string,
-    update: Partial<Pick<FigmaContextSlot, "url" | "figma">>,
+    update: Partial<Pick<FigmaContextSlot, "url" | "figma" | "error">>,
   ) {
     setFigmaSlots((current) =>
       current.map((slot) =>
@@ -259,13 +305,13 @@ export function TicketToCodeDashboard() {
     setDownloadingPackage(true);
 
     try {
-      const jiraImages = selectedTicket.imageAttachments.filter(
-        (image) => !excludedJiraImageIds.has(image.id),
+      const jiraAttachments = selectedTicket.attachments.filter(
+        (attachment) => !excludedJiraAttachmentIds.has(attachment.id),
       );
-      const packagedJiraImages = await Promise.all(
-        jiraImages.map(async (image): Promise<PackageImage> => {
+      const packagedJiraAttachments = await Promise.all(
+        jiraAttachments.map(async (attachment): Promise<PackageAttachment> => {
           const response = await fetch(
-            `/api/jira/attachments/${encodeURIComponent(selectedTicket.key)}/${encodeURIComponent(image.id)}`,
+            `/api/jira/attachments/${encodeURIComponent(selectedTicket.key)}/${encodeURIComponent(attachment.id)}`,
             { cache: "no-store" },
           );
 
@@ -274,35 +320,40 @@ export function TicketToCodeDashboard() {
               error?: string;
             } | null;
             throw new Error(
-              payload?.error || `Unable to download ${image.filename}.`,
+              payload?.error || `Unable to download ${attachment.filename}.`,
             );
           }
 
           const data = new Uint8Array(await response.arrayBuffer());
           return {
-            id: `jira-${image.id}`,
+            id: `jira-${attachment.id}`,
             source: "jira",
-            filename: image.filename,
-            mimeType: image.mimeType,
+            filename: attachment.filename,
+            mimeType: attachment.mimeType,
             size: data.byteLength,
             data,
-            jiraAttachmentId: image.id,
+            jiraAttachmentId: attachment.id,
+            explanation:
+              jiraAttachmentExplanations[attachment.id]?.trim() ?? "",
           };
         }),
       );
       const packagedUploads = await Promise.all(
-        uploadedImages.map(async (image): Promise<PackageImage> => {
-          const data = new Uint8Array(await image.file.arrayBuffer());
-          return {
-            id: image.id,
-            source: "upload",
-            filename: image.file.name,
-            mimeType: image.file.type,
-            size: data.byteLength,
-            data,
-            jiraAttachmentId: null,
-          };
-        }),
+        uploadedAttachments.map(
+          async (attachment): Promise<PackageAttachment> => {
+            const data = new Uint8Array(await attachment.file.arrayBuffer());
+            return {
+              id: attachment.id,
+              source: "upload",
+              filename: attachment.file.name,
+              mimeType: attachment.file.type || "application/octet-stream",
+              size: data.byteLength,
+              data,
+              jiraAttachmentId: null,
+              explanation: attachment.explanation.trim(),
+            };
+          },
+        ),
       );
 
       const packageInput: TicketToCodePackageInput = {
@@ -310,9 +361,9 @@ export function TicketToCodeDashboard() {
         ticket: selectedTicket,
         editedDescription,
         figmaContexts: figmaSlots.flatMap((slot) =>
-          slot.figma ? [slot.figma] : [],
+          slot.figma ? [{ viewport: slot.viewport, context: slot.figma }] : [],
         ),
-        images: [...packagedJiraImages, ...packagedUploads],
+        attachments: [...packagedJiraAttachments, ...packagedUploads],
       };
       const folderName = getTicketToCodePackageFolderName(packageInput);
       const packageFiles = buildTicketToCodePackageFiles(packageInput);
@@ -346,15 +397,19 @@ export function TicketToCodeDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(140deg,#04111f_0%,#12343b_42%,#3a2a1d_74%,#07111f_100%)] px-4 py-10 text-white sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[#123044] bg-[linear-gradient(135deg,rgba(34,211,238,0.3)_0%,transparent_36%),linear-gradient(225deg,rgba(251,146,60,0.25)_0%,transparent_34%),linear-gradient(180deg,#173e50_0%,#10293d_52%,#0b2032_100%)] bg-fixed px-4 py-10 text-white sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="rounded-[28px] border border-white/20 bg-slate-950/35 p-6 shadow-[0_32px_100px_rgba(2,6,23,0.42)] backdrop-blur-xl sm:p-8">
+        <header className="relative overflow-hidden rounded-[28px] border border-cyan-300/30 bg-[linear-gradient(115deg,rgba(8,47,73,0.94),rgba(15,23,42,0.92)_50%,rgba(67,20,7,0.88))] p-6 shadow-[0_32px_100px_rgba(2,6,23,0.6)] backdrop-blur-xl sm:p-8">
+          <div
+            className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#67e8f9,#34d399,#fbbf24,#fb923c)]"
+            aria-hidden="true"
+          />
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/80">
                 Workflow Apps
               </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-50 sm:text-5xl">
+              <h1 className="mt-3 text-3xl font-semibold text-white sm:text-5xl">
                 Ticket to Code
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">
@@ -364,7 +419,7 @@ export function TicketToCodeDashboard() {
             </div>
             <Link
               href="/"
-              className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/15 bg-slate-950/30 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-950/45 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:border-white/40 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950"
             >
               Back to Dashboard
             </Link>
@@ -394,6 +449,8 @@ export function TicketToCodeDashboard() {
           title="Select Assigned Or Developer Ticket"
           eyebrow="Jira Source"
           className="relative z-40"
+          accent="cyan"
+          allowOverflow
         >
           <TicketSelector
             tickets={tickets}
@@ -404,53 +461,80 @@ export function TicketToCodeDashboard() {
           />
         </SectionCard>
 
-        <SectionCard title="Ticket Requirements" eyebrow="Editable Criteria">
+        <SectionCard
+          title="Ticket Requirements"
+          eyebrow="Editable Criteria"
+          accent="purple"
+        >
           <TicketContextPanel
             ticket={selectedTicket}
             description={editedDescription}
             onDescriptionChange={setEditedDescription}
-            uploadedImages={uploadedImages}
-            excludedJiraImageIds={excludedJiraImageIds}
-            onAddImageFiles={handleAddImageFiles}
-            onExcludeJiraImage={(attachmentId) =>
-              setExcludedJiraImageIds((current) =>
-                new Set(current).add(attachmentId),
-              )
-            }
-            onRemoveUploadedImage={handleRemoveUploadedImage}
           />
         </SectionCard>
 
-        <SectionCard title="Figma Context" eyebrow="Optional Design Source">
+        <SectionCard
+          title="Attached Images and Files"
+          eyebrow="Implementation References"
+          accent="red"
+        >
+          {selectedTicket ? (
+            <AttachedFilesPanel
+              ticketKey={selectedTicket.key}
+              jiraAttachments={selectedTicket.attachments.filter(
+                (attachment) => !excludedJiraAttachmentIds.has(attachment.id),
+              )}
+              uploadedAttachments={uploadedAttachments}
+              jiraExplanations={jiraAttachmentExplanations}
+              onAddFiles={handleAddAttachmentFiles}
+              onExcludeJiraAttachment={(attachmentId) =>
+                setExcludedJiraAttachmentIds((current) =>
+                  new Set(current).add(attachmentId),
+                )
+              }
+              onRemoveUploadedAttachment={handleRemoveUploadedAttachment}
+              onJiraExplanationChange={(attachmentId, explanation) =>
+                setJiraAttachmentExplanations((current) => ({
+                  ...current,
+                  [attachmentId]: explanation,
+                }))
+              }
+              onUploadedExplanationChange={updateUploadedAttachmentExplanation}
+            />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-red-200/35 bg-white/[0.07] p-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              Choose a ticket to load its attached images and files.
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Figma Context"
+          eyebrow="Optional Desktop And Mobile Design Sources"
+          accent="emerald"
+        >
           <div className="space-y-6">
+            <p className="text-sm leading-6 text-slate-200">
+              Add a Desktop View, a Mobile View, or both. Each extraction is
+              labeled by viewport in the coding-agent package.
+            </p>
             {figmaSlots.map((slot, index) => (
               <div
                 key={slot.id}
                 className={index ? "border-t border-white/10 pt-6" : undefined}
               >
                 <FigmaContextPanel
-                  label={`Figma Context ${index + 1}`}
+                  viewport={slot.viewport}
                   figmaUrl={slot.url}
                   figma={slot.figma}
                   loading={slot.loading}
-                  canAdd={
-                    index === 0 && Boolean(slot.figma) && figmaSlots.length < 2
+                  error={slot.error}
+                  onUrlChange={(url) =>
+                    updateFigmaSlot(slot.id, { url, error: null })
                   }
-                  removable={index > 0}
-                  onUrlChange={(url) => updateFigmaSlot(slot.id, { url })}
                   onExtract={() => void handleExtractFigma(slot.id)}
-                  onClear={() => updateFigmaSlot(slot.id, { figma: null })}
-                  onAdd={() =>
-                    setFigmaSlots((current) =>
-                      current.length < 2
-                        ? [...current, createFigmaSlot("figma-2")]
-                        : current,
-                    )
-                  }
-                  onRemove={() =>
-                    setFigmaSlots((current) =>
-                      current.filter((candidate) => candidate.id !== slot.id),
-                    )
+                  onClear={() =>
+                    updateFigmaSlot(slot.id, { figma: null, error: null })
                   }
                 />
               </div>
@@ -461,12 +545,13 @@ export function TicketToCodeDashboard() {
         <SectionCard
           title="Package For Coding Agent"
           eyebrow="AI Packaged Info"
+          accent="amber"
           actions={
             <button
               type="button"
               onClick={() => void handleDownloadPackage()}
               disabled={!selectedTicket || downloadingPackage}
-              className="rounded-2xl bg-orange-300 px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_18px_44px_rgba(251,146,60,0.28)] transition hover:bg-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-amber-200/60 bg-[#111827] px-5 py-3 text-sm font-bold text-amber-50 shadow-[0_14px_36px_rgba(17,24,39,0.35)] transition hover:border-amber-100 hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {downloadingPackage
                 ? "Packaging..."
@@ -475,38 +560,43 @@ export function TicketToCodeDashboard() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
                 Ticket
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
                 {selectedTicket?.key ?? "Not selected"}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
                 Requirements
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
                 {editedDescription.trim() ? "Ready" : "Empty"}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
                 Figma
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
-                {figmaSlots.filter((slot) => slot.figma).length} of 2
+                {figmaSlots
+                  .filter((slot) => slot.figma)
+                  .map((slot) =>
+                    slot.viewport === "desktop" ? "Desktop" : "Mobile",
+                  )
+                  .join(" + ") || "None"}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
-                Images
+            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
+                Attachments
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
-                {(selectedTicket?.imageAttachments.length ?? 0) -
-                  excludedJiraImageIds.size +
-                  uploadedImages.length}
+                {(selectedTicket?.attachments.length ?? 0) -
+                  excludedJiraAttachmentIds.size +
+                  uploadedAttachments.length}
               </p>
             </div>
           </div>

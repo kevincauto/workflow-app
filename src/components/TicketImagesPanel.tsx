@@ -102,7 +102,7 @@ export function TicketImagesPanel({
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+    <div className="space-y-4 rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
           Reference Images
@@ -117,7 +117,7 @@ export function TicketImagesPanel({
           {images.map((image) => (
             <article
               key={image.id}
-              className="overflow-hidden rounded-lg border border-white/15 bg-slate-950/55"
+              className="overflow-hidden rounded-lg border border-white/25 bg-[#07111f] shadow-md"
             >
               <button
                 type="button"

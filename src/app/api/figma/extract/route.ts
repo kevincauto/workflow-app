@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { extractFigmaContext } from "@/lib/figma";
+import { extractFigmaContext, FigmaApiError } from "@/lib/figma";
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
             ? error.message
             : "Unable to extract Figma context.",
       },
-      { status: 500 },
+      { status: error instanceof FigmaApiError ? error.status : 500 },
     );
   }
 }

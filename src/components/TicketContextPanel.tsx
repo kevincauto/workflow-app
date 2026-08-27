@@ -1,32 +1,18 @@
 import { Copy, ExternalLink } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import {
-  TicketImagesPanel,
-  type UploadedTicketImage,
-} from "@/components/TicketImagesPanel";
 import type { JiraTicketOption } from "@/lib/types";
 
 interface TicketContextPanelProps {
   ticket: JiraTicketOption | null;
   description: string;
   onDescriptionChange: (description: string) => void;
-  uploadedImages: UploadedTicketImage[];
-  excludedJiraImageIds: Set<string>;
-  onAddImageFiles: (files: File[]) => void;
-  onExcludeJiraImage: (attachmentId: string) => void;
-  onRemoveUploadedImage: (imageId: string) => void;
 }
 
 export function TicketContextPanel({
   ticket,
   description,
   onDescriptionChange,
-  uploadedImages,
-  excludedJiraImageIds,
-  onAddImageFiles,
-  onExcludeJiraImage,
-  onRemoveUploadedImage,
 }: TicketContextPanelProps) {
   const descriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -51,7 +37,7 @@ export function TicketContextPanel({
 
   if (!ticket) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/20 bg-slate-950/25 p-4 text-sm text-slate-200">
+      <div className="rounded-2xl border border-dashed border-purple-200/35 bg-white/[0.07] p-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
         Choose a ticket to load editable requirements.
       </div>
     );
@@ -60,8 +46,8 @@ export function TicketContextPanel({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
             Key
           </p>
           <div className="mt-2 flex items-center gap-2">
@@ -72,7 +58,7 @@ export function TicketContextPanel({
               href={ticket.webUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-cyan-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-purple-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-purple-300"
               aria-label={`Open ${ticket.key} in Jira`}
               title="Open in Jira"
             >
@@ -81,7 +67,7 @@ export function TicketContextPanel({
             <button
               type="button"
               onClick={() => void copyTicketKey()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-cyan-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-purple-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-purple-300"
               aria-label={`Copy Jira key ${ticket.key}`}
               title="Copy Jira key"
             >
@@ -89,24 +75,24 @@ export function TicketContextPanel({
             </button>
           </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
             Status
           </p>
           <p className="mt-2 text-base font-semibold text-slate-50">
             {ticket.status ?? "Unknown"}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
             Priority
           </p>
           <p className="mt-2 text-base font-semibold text-slate-50">
             {ticket.priority ?? "Unknown"}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
             Sprint
           </p>
           <p className="mt-2 text-base font-semibold text-slate-50">
@@ -116,16 +102,16 @@ export function TicketContextPanel({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
             Assignee
           </p>
           <p className="mt-2 text-base font-semibold text-slate-50">
             {ticket.assignee ?? "Unknown"}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/80">
+        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
             Developer
           </p>
           <p className="mt-2 text-base font-semibold text-slate-50">
@@ -134,14 +120,14 @@ export function TicketContextPanel({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-emerald-300/25 bg-slate-950/45 p-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-orange-300">
+      <div className="rounded-2xl border border-purple-200/30 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <p className="text-xs uppercase tracking-[0.18em] text-purple-200">
           {ticket.issueType ?? "Ticket"}
         </p>
         <h3 className="mt-2 text-base font-semibold text-slate-50">
           {ticket.summary}
         </h3>
-        <label className="mt-4 block text-xs uppercase tracking-[0.18em] text-orange-300">
+        <label className="mt-4 block text-xs uppercase tracking-[0.18em] text-purple-200">
           Editable Ticket Description
         </label>
         <textarea
@@ -152,21 +138,10 @@ export function TicketContextPanel({
             onDescriptionChange(event.currentTarget.value);
           }}
           rows={1}
-          className="mt-2 min-h-56 w-full resize-y overflow-hidden rounded-2xl border border-white/15 bg-slate-950/60 px-4 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+          className="mt-2 min-h-56 w-full resize-y overflow-hidden rounded-xl border border-purple-200/25 bg-[#07111f] px-4 py-3 text-sm leading-6 text-slate-100 shadow-inner outline-none transition placeholder:text-slate-400 focus:border-purple-300 focus:ring-2 focus:ring-purple-300/30"
           placeholder="Add requirements, acceptance criteria, and meeting notes."
         />
       </div>
-
-      <TicketImagesPanel
-        ticketKey={ticket.key}
-        jiraImages={(ticket.imageAttachments ?? []).filter(
-          (image) => !excludedJiraImageIds.has(image.id),
-        )}
-        uploadedImages={uploadedImages}
-        onAddFiles={onAddImageFiles}
-        onExcludeJiraImage={onExcludeJiraImage}
-        onRemoveUploadedImage={onRemoveUploadedImage}
-      />
     </div>
   );
 }

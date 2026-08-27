@@ -82,6 +82,16 @@ const figmaRequestTimeoutMs = 20_000;
 const figmaExtractionDepth = 6;
 const maxCollectedDesignTokens = 40;
 const maxDetectedControls = 40;
+
+export class FigmaApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "FigmaApiError";
+  }
+}
 const maxTraversalNodes = 500;
 
 export function parseFigmaUrl(value: string): FigmaUrlParts {
@@ -135,7 +145,7 @@ function getFigmaToken() {
   return token;
 }
 
-async function fetchFigmaJson<T>(path: string): Promise<T> {
+async function fetchFigmaJson<T>(path: string, operation: string): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), figmaRequestTimeoutMs);
 
@@ -150,7 +160,17 @@ async function fetchFigmaJson<T>(path: string): Promise<T> {
     });
 
     if (!response.ok) {
-      throw new Error(`Figma request failed with status ${response.status}.`);
+      if (response.status === 403) {
+        throw new FigmaApiError(
+          `Figma denied access while reading the ${operation} (403). Confirm FIGMA_ACCESS_TOKEN has the file_content:read scope and belongs to a user who can open this Figma file.`,
+          response.status,
+        );
+      }
+
+      throw new FigmaApiError(
+        `Figma ${operation} request failed with status ${response.status}.`,
+        response.status,
+      );
     }
 
     return (await response.json()) as T;
@@ -705,6 +725,7 @@ async function fetchPreviewImage(fileKey: string, nodeId: string | null) {
 
   const payload = await fetchFigmaJson<FigmaImagesPayload>(
     `/images/${encodeURIComponent(fileKey)}?ids=${encodeURIComponent(nodeId)}&format=png`,
+    "preview image",
   );
 
   return payload.images?.[nodeId] ?? null;
@@ -725,11 +746,13 @@ export async function extractFigmaContext(
   if (parts.nodeId) {
     const nodesPayload = await fetchFigmaJson<FigmaNodesPayload>(
       `/files/${encodeURIComponent(parts.fileKey)}/nodes?ids=${encodeURIComponent(parts.nodeId)}&depth=${figmaExtractionDepth}`,
+      "selected node",
     );
     selectedNode = nodesPayload.nodes?.[parts.nodeId]?.document ?? undefined;
   } else {
     const file = await fetchFigmaJson<FigmaFilePayload>(
       `/files/${encodeURIComponent(parts.fileKey)}?depth=${figmaExtractionDepth}`,
+      "file",
     );
     selectedNode = file.document;
     fileName = file.name ?? fileName;

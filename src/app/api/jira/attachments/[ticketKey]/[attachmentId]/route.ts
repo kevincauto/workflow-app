@@ -1,4 +1,4 @@
-import { getJiraImageAttachmentContent } from "@/lib/jira";
+import { getJiraAttachmentContent } from "@/lib/jira";
 
 function contentDispositionFilename(filename: string) {
   const fallback = filename
@@ -18,10 +18,7 @@ export async function GET(
 ) {
   try {
     const { ticketKey, attachmentId } = await params;
-    const attachment = await getJiraImageAttachmentContent(
-      ticketKey,
-      attachmentId,
-    );
+    const attachment = await getJiraAttachmentContent(ticketKey, attachmentId);
 
     return new Response(attachment.data, {
       headers: {
@@ -35,7 +32,7 @@ export async function GET(
     const message =
       error instanceof Error
         ? error.message
-        : "Unable to load Jira image attachment.";
+        : "Unable to load Jira attachment.";
 
     return Response.json(
       { error: message },

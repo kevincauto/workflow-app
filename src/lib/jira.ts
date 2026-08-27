@@ -1,7 +1,7 @@
 import { mockJiraIssue } from "@/lib/mockData";
 import type {
   JiraCandidate,
-  JiraImageAttachment,
+  JiraAttachment,
   JiraIssue,
   JiraSprintInfo,
   JiraTicketOption,
@@ -191,7 +191,7 @@ function getMockAssignedTickets(): ListAssignedJiraTicketsResponse {
           startDate: null,
           endDate: null,
         },
-        imageAttachments: [
+        attachments: [
           {
             id: "mock-ticket-image",
             filename: "jira-story-reference.svg",
@@ -371,7 +371,7 @@ function getFieldNumber(value: unknown) {
   return null;
 }
 
-function normalizeImageAttachments(value: unknown): JiraImageAttachment[] {
+function normalizeAttachments(value: unknown): JiraAttachment[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -385,7 +385,7 @@ function normalizeImageAttachments(value: unknown): JiraImageAttachment[] {
     const id = attachment.id === undefined ? "" : String(attachment.id);
     const mimeType = attachment.mimeType?.trim() ?? "";
 
-    if (!id || !attachment.filename || !mimeType.startsWith("image/")) {
+    if (!id || !attachment.filename || !mimeType) {
       return [];
     }
 
@@ -581,7 +581,7 @@ function mapSearchIssue(
     estimatePoints,
     updatedAt: typeof fields.updated === "string" ? fields.updated : null,
     sprint: getIssueSprint(fields, sprintById),
-    imageAttachments: normalizeImageAttachments(fields.attachment),
+    attachments: normalizeAttachments(fields.attachment),
   };
 }
 
@@ -687,7 +687,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
   };
 }
 
-export async function getJiraImageAttachmentContent(
+export async function getJiraAttachmentContent(
   ticketKey: string,
   attachmentId: string,
 ) {
@@ -696,7 +696,7 @@ export async function getJiraImageAttachmentContent(
       ticketKey !== mockJiraIssue.key ||
       attachmentId !== "mock-ticket-image"
     ) {
-      throw new Error("Jira image attachment was not found.");
+      throw new Error("Jira attachment was not found.");
     }
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720"><rect width="1200" height="720" fill="#07111f"/><rect x="90" y="90" width="1020" height="540" rx="32" fill="#12343b" stroke="#67e8f9" stroke-width="6"/><text x="600" y="330" text-anchor="middle" font-family="sans-serif" font-size="54" fill="#f8fafc">Jira Story Reference</text><text x="600" y="410" text-anchor="middle" font-family="sans-serif" font-size="30" fill="#fdba74">Mock attached image</text></svg>`;
@@ -734,12 +734,8 @@ export async function getJiraImageAttachmentContent(
     (candidate) => String(candidate.id) === attachmentId,
   );
 
-  if (
-    !attachment?.content ||
-    !attachment.filename ||
-    !attachment.mimeType?.startsWith("image/")
-  ) {
-    throw new Error("Jira image attachment was not found.");
+  if (!attachment?.content || !attachment.filename || !attachment.mimeType) {
+    throw new Error("Jira attachment was not found.");
   }
 
   const contentUrl = new URL(attachment.content, getJiraBaseUrl());
