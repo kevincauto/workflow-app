@@ -1,5 +1,6 @@
 import type {
   FigmaColorToken,
+  FigmaBounds,
   FigmaControlOrientation,
   FigmaDetectedControl,
   FigmaDetectedControlType,
@@ -31,8 +32,16 @@ interface FigmaNode {
     }
   >;
   layoutMode?: string;
+  layoutAlign?: string;
+  layoutGrow?: number;
   primaryAxisSizingMode?: string;
   counterAxisSizingMode?: string;
+  primaryAxisAlignItems?: string;
+  counterAxisAlignItems?: string;
+  constraints?: {
+    horizontal?: string;
+    vertical?: string;
+  };
   itemSpacing?: number;
   paddingTop?: number;
   paddingRight?: number;
@@ -48,6 +57,24 @@ interface FigmaNode {
       a?: number;
     };
   }>;
+  strokes?: Array<{
+    type?: string;
+    visible?: boolean;
+    color?: {
+      r?: number;
+      g?: number;
+      b?: number;
+      a?: number;
+    };
+  }>;
+  strokeWeight?: number;
+  strokeAlign?: string;
+  individualStrokeWeights?: {
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
+  };
   characters?: string;
   style?: {
     fontFamily?: string;
@@ -63,6 +90,13 @@ interface FigmaNode {
 interface FigmaFilePayload {
   name?: string;
   document?: FigmaNode;
+  components?: Record<string, FigmaComponentMetadata>;
+  componentSets?: Record<string, FigmaComponentMetadata>;
+}
+
+interface FigmaComponentMetadata {
+  name?: string;
+  componentSetId?: string;
 }
 
 interface FigmaNodesPayload {
@@ -70,6 +104,8 @@ interface FigmaNodesPayload {
     string,
     {
       document?: FigmaNode;
+      components?: Record<string, FigmaComponentMetadata>;
+      componentSets?: Record<string, FigmaComponentMetadata>;
     } | null
   >;
 }
@@ -82,6 +118,7 @@ const figmaRequestTimeoutMs = 20_000;
 const figmaExtractionDepth = 6;
 const maxCollectedDesignTokens = 40;
 const maxDetectedControls = 40;
+const maxIconMeasurements = 40;
 
 export class FigmaApiError extends Error {
   constructor(
@@ -300,17 +337,321 @@ function collectRadii(
   }
 }
 
-function buildHierarchy(node: FigmaNode, depth = 0): FigmaLayerNode[] {
-  if (depth >= 4) {
-    return [];
+function getBounds(node: FigmaNode): FigmaBounds | null {
+  const box = node.absoluteBoundingBox;
+  return box &&
+    typeof box.x === "number" &&
+    typeof box.y === "number" &&
+    typeof box.width === "number" &&
+    typeof box.height === "number"
+    ? { x: box.x, y: box.y, width: box.width, height: box.height }
+    : null;
+}
+
+function getNodeLayout(node: FigmaNode) {
+  return {
+    mode: node.layoutMode ?? null,
+    primaryAxisSizingMode: node.primaryAxisSizingMode ?? null,
+    counterAxisSizingMode: node.counterAxisSizingMode ?? null,
+    primaryAxisAlignItems: node.primaryAxisAlignItems ?? null,
+    counterAxisAlignItems: node.counterAxisAlignItems ?? null,
+    itemSpacing: node.itemSpacing ?? null,
+    padding: {
+      top: node.paddingTop ?? null,
+      right: node.paddingRight ?? null,
+      bottom: node.paddingBottom ?? null,
+      left: node.paddingLeft ?? null,
+    },
+    layoutAlign: node.layoutAlign ?? null,
+    layoutGrow: node.layoutGrow ?? null,
+    constraints: {
+      horizontal: node.constraints?.horizontal ?? null,
+      vertical: node.constraints?.vertical ?? null,
+    },
+  };
+}
+
+function getComponentProperties(node: FigmaNode) {
+  return Object.entries(node.componentProperties ?? {}).map(
+    ([name, property]) => ({
+      name,
+      type: property.type ?? null,
+      value: property.value ?? null,
+    }),
+  );
+}
+
+function getStrokes(node: FigmaNode) {
+  return (node.strokes ?? []).flatMap((stroke) =>
+    stroke.type === "SOLID" && stroke.visible !== false && stroke.color
+      ? [
+          {
+            color: toHexColor(stroke.color),
+            weight: node.strokeWeight ?? null,
+            align: node.strokeAlign ?? null,
+            sides: {
+              top: node.individualStrokeWeights?.top ?? null,
+              right: node.individualStrokeWeights?.right ?? null,
+              bottom: node.individualStrokeWeights?.bottom ?? null,
+              left: node.individualStrokeWeights?.left ?? null,
+            },
+          },
+        ]
+      : [],
+  );
+}
+
+function countNodes(node: FigmaNode): number {
+  const pending = [node];
+  let count = 0;
+
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current) {
+      break;
+    }
+    count += 1;
+    pending.push(...(current.children ?? []));
   }
 
-  return (node.children ?? []).slice(0, 24).map((child) => ({
-    id: child.id ?? child.name ?? "unknown-node",
-    name: child.name ?? "Unnamed layer",
-    type: child.type ?? "UNKNOWN",
-    children: buildHierarchy(child, depth + 1),
-  }));
+  return count;
+}
+
+function buildHierarchy(
+  root: FigmaNode,
+  components: Record<string, FigmaComponentMetadata>,
+  componentSets: Record<string, FigmaComponentMetadata>,
+) {
+  const coverage = {
+    nodesVisited: countNodes(root),
+    nodesIncluded: 0,
+    nodesOmitted: 0,
+    nodesMissingGeometry: 0,
+    apiDepthLimited: false,
+    normalizationTruncated: false,
+  };
+
+  function normalizeNode(
+    node: FigmaNode,
+    parentPath: string,
+  ): FigmaLayerNode | null {
+    if (coverage.nodesIncluded >= maxTraversalNodes) {
+      return null;
+    }
+
+    coverage.nodesIncluded += 1;
+    const bounds = getBounds(node);
+    if (!bounds) {
+      coverage.nodesMissingGeometry += 1;
+    }
+
+    const id = node.id ?? node.name ?? `unknown-node-${coverage.nodesIncluded}`;
+    const name = node.name ?? "Unnamed layer";
+    const path = parentPath ? `${parentPath} / ${name}` : name;
+    const component = node.componentId
+      ? components[node.componentId]
+      : undefined;
+    const setId = node.componentSetId ?? component?.componentSetId ?? null;
+
+    return {
+      id,
+      name,
+      type: node.type ?? "UNKNOWN",
+      path,
+      visible: node.visible !== false,
+      bounds,
+      layout: getNodeLayout(node),
+      component: {
+        id: node.componentId ?? null,
+        name: component?.name ?? null,
+        setId,
+        setName: setId ? (componentSets[setId]?.name ?? null) : null,
+        properties: getComponentProperties(node),
+      },
+      strokes: getStrokes(node),
+      children: (node.children ?? []).flatMap((child) => {
+        const normalized = normalizeNode(child, path);
+        return normalized ? [normalized] : [];
+      }),
+    };
+  }
+
+  const normalizedRoot = normalizeNode(root, "");
+  const hierarchy = normalizedRoot ? [normalizedRoot] : [];
+  coverage.nodesOmitted = Math.max(
+    0,
+    coverage.nodesVisited - coverage.nodesIncluded,
+  );
+  coverage.normalizationTruncated = coverage.nodesOmitted > 0;
+
+  return { hierarchy, coverage };
+}
+
+const glyphNodeTypes = new Set([
+  "VECTOR",
+  "BOOLEAN_OPERATION",
+  "ELLIPSE",
+  "LINE",
+  "POLYGON",
+  "RECTANGLE",
+  "STAR",
+]);
+
+function getIconMeasurements(
+  node: FigmaNode,
+  components: Record<string, FigmaComponentMetadata>,
+  componentSets: Record<string, FigmaComponentMetadata>,
+) {
+  const measurements: NormalizedFigmaContext["iconMeasurements"] = [];
+  const ambiguityNotes: string[] = [];
+  let visitedNodes = 0;
+
+  function visit(target: FigmaNode) {
+    if (visitedNodes >= maxTraversalNodes || !isVisibleNode(target)) {
+      return;
+    }
+    visitedNodes += 1;
+
+    const searchText = getNodeSearchText(target, components, componentSets);
+    const targetBounds = getBounds(target);
+    const isTarget = includesAny(searchText, [
+      "icon button",
+      "icon-button",
+      "size icon",
+      "size=icon",
+    ]);
+
+    if (targetBounds && isTarget) {
+      const measuredTargetBounds = targetBounds;
+      const candidates: Array<{ node: FigmaNode; depth: number }> = [];
+      let visitedCandidates = 0;
+      function collectGlyphs(candidate: FigmaNode, depth = 0) {
+        if (
+          visitedCandidates >= maxTraversalNodes ||
+          !isVisibleNode(candidate)
+        ) {
+          return;
+        }
+        visitedCandidates += 1;
+
+        const bounds = getBounds(candidate);
+        if (
+          candidate !== target &&
+          bounds &&
+          bounds.width > 0 &&
+          bounds.height > 0 &&
+          bounds.width <= measuredTargetBounds.width &&
+          bounds.height <= measuredTargetBounds.height &&
+          (candidate.type === "INSTANCE" ||
+            candidate.type === "COMPONENT" ||
+            glyphNodeTypes.has(candidate.type ?? "") ||
+            includesAny(
+              getNodeSearchText(candidate, components, componentSets),
+              ["icon", "glyph"],
+            ))
+        ) {
+          candidates.push({ node: candidate, depth });
+        }
+        for (const child of candidate.children ?? []) {
+          collectGlyphs(child, depth + 1);
+        }
+      }
+      collectGlyphs(target);
+      candidates.sort((left, right) => {
+        const leftSemantic =
+          left.node.type === "INSTANCE" ||
+          includesAny(getNodeSearchText(left.node, components, componentSets), [
+            "icon",
+            "glyph",
+          ]);
+        const rightSemantic =
+          right.node.type === "INSTANCE" ||
+          includesAny(
+            getNodeSearchText(right.node, components, componentSets),
+            ["icon", "glyph"],
+          );
+        if (leftSemantic !== rightSemantic) {
+          return leftSemantic ? -1 : 1;
+        }
+        if (left.depth !== right.depth) {
+          return left.depth - right.depth;
+        }
+        const leftBounds = getBounds(left.node);
+        const rightBounds = getBounds(right.node);
+        return (
+          (rightBounds?.width ?? 0) * (rightBounds?.height ?? 0) -
+          (leftBounds?.width ?? 0) * (leftBounds?.height ?? 0)
+        );
+      });
+      const selectedCandidate = candidates[0];
+      const glyph = selectedCandidate?.node;
+      const glyphBounds = glyph ? getBounds(glyph) : null;
+
+      if (glyph && glyphBounds) {
+        const semanticTarget = includesAny(searchText, [
+          "icon button",
+          "icon-button",
+          "size icon",
+        ]);
+        measurements.push({
+          target: {
+            id: target.id ?? target.name ?? "unknown-target",
+            name: target.name ?? "Unnamed target",
+            type: target.type ?? "UNKNOWN",
+            bounds: measuredTargetBounds,
+          },
+          glyph: {
+            id: glyph.id ?? glyph.name ?? "unknown-glyph",
+            name: glyph.name ?? "Unnamed glyph",
+            type: glyph.type ?? "UNKNOWN",
+            bounds: glyphBounds,
+          },
+          confidence: semanticTarget ? "high" : "medium",
+          evidence: [
+            `Target semantics: ${target.name ?? target.type ?? "unknown"}`,
+            `Nested glyph candidate: ${glyph.name ?? glyph.type ?? "unknown"}`,
+            `Target ${measuredTargetBounds.width}x${measuredTargetBounds.height}; glyph ${glyphBounds.width}x${glyphBounds.height}`,
+          ],
+        });
+        const nextCandidate = candidates[1];
+        const hasEquallyPlausibleCandidate =
+          selectedCandidate &&
+          nextCandidate &&
+          selectedCandidate.depth === nextCandidate.depth &&
+          (selectedCandidate.node.type === "INSTANCE") ===
+            (nextCandidate.node.type === "INSTANCE");
+        if (hasEquallyPlausibleCandidate) {
+          ambiguityNotes.push(
+            `${target.name ?? "An icon target"} contained multiple equally ranked glyph candidates; the first measurable candidate was selected.`,
+          );
+        }
+      } else {
+        ambiguityNotes.push(
+          `${target.name ?? "A likely icon target"} was detected, but no measurable nested glyph was found.`,
+        );
+      }
+    }
+
+    for (const child of target.children ?? []) {
+      visit(child);
+    }
+  }
+
+  visit(node);
+  if (visitedNodes >= maxTraversalNodes) {
+    ambiguityNotes.push(
+      `Icon detection stopped after ${maxTraversalNodes} nodes; additional icon controls may not be represented.`,
+    );
+  }
+  if (measurements.length > maxIconMeasurements) {
+    ambiguityNotes.push(
+      `${measurements.length - maxIconMeasurements} icon measurements were omitted after reaching the ${maxIconMeasurements}-measurement limit.`,
+    );
+  }
+  return {
+    measurements: measurements.slice(0, maxIconMeasurements),
+    ambiguityNotes,
+  };
 }
 
 function normalizeName(value: string | undefined) {
@@ -328,12 +669,20 @@ function getComponentPropertyText(node: FigmaNode) {
     .toLowerCase();
 }
 
-function getNodeSearchText(node: FigmaNode) {
+function getNodeSearchText(
+  node: FigmaNode,
+  components: Record<string, FigmaComponentMetadata> = {},
+  componentSets: Record<string, FigmaComponentMetadata> = {},
+) {
+  const component = node.componentId ? components[node.componentId] : undefined;
+  const setId = node.componentSetId ?? component?.componentSetId;
   return [
     node.name,
     node.type,
     node.componentId,
     node.componentSetId,
+    component?.name,
+    setId ? componentSets[setId]?.name : undefined,
     getComponentPropertyText(node),
   ]
     .filter(Boolean)
@@ -660,6 +1009,9 @@ function normalizeFigmaContext(input: {
   fileName: string;
   node: FigmaNode;
   previewImageUrl: string | null;
+  components: Record<string, FigmaComponentMetadata>;
+  componentSets: Record<string, FigmaComponentMetadata>;
+  apiDepthLimited: boolean;
 }): NormalizedFigmaContext {
   const colors = new Map<string, FigmaColorToken>();
   const text: FigmaTextNode[] = [];
@@ -669,6 +1021,17 @@ function normalizeFigmaContext(input: {
   collectText(input.node, text, { count: 0 });
   collectRadii(input.node, radii, { count: 0 });
   const detectedControls = getDetectedControls(input.node);
+  const { hierarchy, coverage } = buildHierarchy(
+    input.node,
+    input.components,
+    input.componentSets,
+  );
+  coverage.apiDepthLimited = input.apiDepthLimited;
+  const iconDetection = getIconMeasurements(
+    input.node,
+    input.components,
+    input.componentSets,
+  );
 
   return {
     source: "live",
@@ -698,8 +1061,10 @@ function normalizeFigmaContext(input: {
     colors: Array.from(colors.values()).slice(0, maxCollectedDesignTokens),
     text: text.slice(0, maxCollectedDesignTokens),
     radii: Array.from(radii).sort((left, right) => left - right),
-    hierarchy: buildHierarchy(input.node),
+    hierarchy,
     detectedControls,
+    iconMeasurements: iconDetection.measurements,
+    extractionCoverage: coverage,
     implementationNotes: [
       "Use this normalized Figma context as visual guidance, not as raw source code.",
       "Preserve spacing, text hierarchy, colors, radii, and layout direction where they are represented here.",
@@ -712,8 +1077,19 @@ function normalizeFigmaContext(input: {
       ...(input.parts.nodeId
         ? []
         : [
-            "No selected node was provided; context was extracted from the file root.",
+            `No selected node was provided; full-file extraction is limited to API depth ${figmaExtractionDepth}. Select a frame or section for complete nested geometry.`,
           ]),
+      ...(coverage.nodesOmitted
+        ? [
+            `${coverage.nodesOmitted} nodes were omitted after reaching the ${maxTraversalNodes}-node normalization limit.`,
+          ]
+        : []),
+      ...(coverage.nodesMissingGeometry
+        ? [
+            `${coverage.nodesMissingGeometry} included nodes did not provide absolute bounding-box geometry.`,
+          ]
+        : []),
+      ...iconDetection.ambiguityNotes,
     ],
   };
 }
@@ -742,13 +1118,18 @@ export async function extractFigmaContext(
 
   let selectedNode: FigmaNode | undefined;
   let fileName = parts.fileName ?? parts.fileKey;
+  let components: Record<string, FigmaComponentMetadata> = {};
+  let componentSets: Record<string, FigmaComponentMetadata> = {};
 
   if (parts.nodeId) {
     const nodesPayload = await fetchFigmaJson<FigmaNodesPayload>(
-      `/files/${encodeURIComponent(parts.fileKey)}/nodes?ids=${encodeURIComponent(parts.nodeId)}&depth=${figmaExtractionDepth}`,
+      `/files/${encodeURIComponent(parts.fileKey)}/nodes?ids=${encodeURIComponent(parts.nodeId)}`,
       "selected node",
     );
-    selectedNode = nodesPayload.nodes?.[parts.nodeId]?.document ?? undefined;
+    const selectedNodePayload = nodesPayload.nodes?.[parts.nodeId];
+    selectedNode = selectedNodePayload?.document ?? undefined;
+    components = selectedNodePayload?.components ?? {};
+    componentSets = selectedNodePayload?.componentSets ?? {};
   } else {
     const file = await fetchFigmaJson<FigmaFilePayload>(
       `/files/${encodeURIComponent(parts.fileKey)}?depth=${figmaExtractionDepth}`,
@@ -756,6 +1137,8 @@ export async function extractFigmaContext(
     );
     selectedNode = file.document;
     fileName = file.name ?? fileName;
+    components = file.components ?? {};
+    componentSets = file.componentSets ?? {};
   }
 
   if (!selectedNode) {
@@ -771,6 +1154,9 @@ export async function extractFigmaContext(
     fileName,
     node: selectedNode,
     previewImageUrl,
+    components,
+    componentSets,
+    apiDepthLimited: !parts.nodeId,
   });
 }
 

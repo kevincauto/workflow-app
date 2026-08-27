@@ -79,7 +79,91 @@ export interface FigmaLayerNode {
   id: string;
   name: string;
   type: string;
+  path: string;
+  visible: boolean;
+  bounds: FigmaBounds | null;
+  layout: FigmaNodeLayout;
+  component: {
+    id: string | null;
+    name: string | null;
+    setId: string | null;
+    setName: string | null;
+    properties: FigmaComponentProperty[];
+  };
+  strokes: FigmaStroke[];
   children: FigmaLayerNode[];
+}
+
+export interface FigmaBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface FigmaComponentProperty {
+  name: string;
+  type: string | null;
+  value: string | boolean | number | null;
+}
+
+export interface FigmaNodeLayout {
+  mode: string | null;
+  primaryAxisSizingMode: string | null;
+  counterAxisSizingMode: string | null;
+  primaryAxisAlignItems: string | null;
+  counterAxisAlignItems: string | null;
+  itemSpacing: number | null;
+  padding: {
+    top: number | null;
+    right: number | null;
+    bottom: number | null;
+    left: number | null;
+  };
+  layoutAlign: string | null;
+  layoutGrow: number | null;
+  constraints: {
+    horizontal: string | null;
+    vertical: string | null;
+  };
+}
+
+export interface FigmaStroke {
+  color: string;
+  weight: number | null;
+  align: string | null;
+  sides: {
+    top: number | null;
+    right: number | null;
+    bottom: number | null;
+    left: number | null;
+  };
+}
+
+export interface FigmaIconMeasurement {
+  target: {
+    id: string;
+    name: string;
+    type: string;
+    bounds: FigmaBounds;
+  };
+  glyph: {
+    id: string;
+    name: string;
+    type: string;
+    bounds: FigmaBounds;
+  };
+  confidence: "high" | "medium" | "low";
+  evidence: string[];
+}
+
+export interface FigmaExtractionCoverage {
+  nodesVisited: number;
+  nodesIncluded: number;
+  nodesOmitted: number;
+  nodesMissingGeometry: number;
+  apiDepthLimited: boolean;
+  normalizationTruncated: boolean;
 }
 
 export type FigmaDetectedControlType =
@@ -137,6 +221,8 @@ export interface NormalizedFigmaContext {
   radii: number[];
   hierarchy: FigmaLayerNode[];
   detectedControls: FigmaDetectedControl[];
+  iconMeasurements: FigmaIconMeasurement[];
+  extractionCoverage: FigmaExtractionCoverage;
   implementationNotes: string[];
   ambiguityNotes: string[];
 }

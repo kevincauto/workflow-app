@@ -1,9 +1,6 @@
 import { sanitizePackageName } from "@/lib/reviewPackage";
 import type {
-  FigmaLayerNode,
   FigmaViewport,
-  NormalizedFigmaContext,
-  PackagedFigmaContext,
   PackageAttachment,
   TicketToCodePackageInput,
 } from "@/lib/types";
@@ -14,124 +11,12 @@ function markdownText(value: string | null | undefined, fallback: string) {
   return value?.trim() ? value.trim() : fallback;
 }
 
-function formatList(items: string[], fallback: string) {
-  return items.length ? items.map((item) => `- ${item}`).join("\n") : fallback;
-}
-
-function renderHierarchy(nodes: FigmaLayerNode[], depth = 0): string[] {
-  return nodes.flatMap((node) => [
-    `${"  ".repeat(depth)}- ${node.name} (${node.type})`,
-    ...renderHierarchy(node.children, depth + 1),
-  ]);
-}
-
-function renderDetectedControls(figma: NormalizedFigmaContext) {
-  if (!figma.detectedControls.length) {
-    return "No specific controls were detected. Verify control type and option orientation against the Figma preview when implementing.";
-  }
-
-  return figma.detectedControls
-    .map((control) =>
-      [
-        `- ${control.name}`,
-        `  - Type: ${control.controlType}`,
-        `  - Orientation: ${control.orientation}`,
-        `  - Option count: ${control.optionCount}`,
-        `  - Options: ${control.options.length ? control.options.join(", ") : "Not extracted"}`,
-        `  - Confidence: ${control.confidence}`,
-        `  - Guidance: ${control.guidance}`,
-        ...(control.evidence.length
-          ? [`  - Evidence: ${control.evidence.join("; ")}`]
-          : []),
-      ].join("\n"),
-    )
-    .join("\n");
-}
-
 function getViewportLabel(viewport: FigmaViewport) {
   return viewport === "desktop" ? "Desktop View" : "Mobile View";
 }
 
-function buildFigmaMarkdown({
-  viewport,
-  context: figma,
-}: PackagedFigmaContext) {
-  const viewportLabel = getViewportLabel(viewport);
-
-  return [
-    `# Figma Context: ${viewportLabel}`,
-    "",
-    `- Viewport: ${viewportLabel}`,
-    `- Selected node: ${figma.selectedNodeName}`,
-    `- Source URL: ${figma.url}`,
-    `- File: ${figma.fileName}`,
-    `- File key: ${figma.fileKey}`,
-    `- Node id: ${figma.nodeId ?? "Not provided"}`,
-    `- Selected node type: ${figma.selectedNodeType}`,
-    `- Preview image URL: ${figma.previewImageUrl ?? "Not available"}`,
-    `- Dimensions: ${figma.dimensions.width ?? "unknown"} x ${figma.dimensions.height ?? "unknown"}`,
-    "",
-    "## Layout",
-    "",
-    `- Mode: ${figma.layout.mode ?? "unknown"}`,
-    `- Primary axis sizing: ${figma.layout.primaryAxisSizingMode ?? "unknown"}`,
-    `- Counter axis sizing: ${figma.layout.counterAxisSizingMode ?? "unknown"}`,
-    `- Item spacing: ${figma.layout.itemSpacing ?? "unknown"}`,
-    `- Padding: top ${figma.layout.padding.top ?? "unknown"}, right ${figma.layout.padding.right ?? "unknown"}, bottom ${figma.layout.padding.bottom ?? "unknown"}, left ${figma.layout.padding.left ?? "unknown"}`,
-    "",
-    "## Colors",
-    "",
-    figma.colors.length
-      ? figma.colors
-          .map((color) => `- ${color.name}: ${color.value}`)
-          .join("\n")
-      : "No color tokens were extracted.",
-    "",
-    "## Text",
-    "",
-    figma.text.length
-      ? figma.text
-          .map(
-            (text) =>
-              `- ${text.name}: ${text.characters} (${text.fontFamily ?? "font unknown"}, ${text.fontSize ?? "size unknown"})`,
-          )
-          .join("\n")
-      : "No text nodes were extracted.",
-    "",
-    "## Detected Controls",
-    "",
-    renderDetectedControls(figma),
-    "",
-    "## Radii",
-    "",
-    figma.radii.length
-      ? figma.radii.map((radius) => `- ${radius}px`).join("\n")
-      : "No radii were extracted.",
-    "",
-    "## Layer Hierarchy",
-    "",
-    renderHierarchy(figma.hierarchy).join("\n") ||
-      "No child layers were extracted.",
-    "",
-    "## Implementation Notes",
-    "",
-    formatList(
-      figma.implementationNotes,
-      "No implementation notes were generated.",
-    ),
-    "",
-    "## Ambiguity Notes",
-    "",
-    formatList(figma.ambiguityNotes, "No ambiguity notes were generated."),
-    "",
-  ].join("\n");
-}
-
-function getFigmaFileNames(viewport: FigmaViewport) {
-  return {
-    markdown: `figma-context-${viewport}.md`,
-    json: `figma-context-${viewport}.json`,
-  };
+function getFigmaFileName(viewport: FigmaViewport) {
+  return `figma-context-${viewport}.json`;
 }
 
 function getFileExtension(filename: string) {
@@ -173,13 +58,12 @@ export function getTicketToCodePackageFolderName(
 
 export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
   const packagedAttachments = buildPackagedAttachments(input.attachments);
-  const figmaFiles = input.figmaContexts.flatMap(({ viewport }) => {
-    const names = getFigmaFileNames(viewport);
-    return [names.markdown, names.json];
-  });
+  const figmaFiles = input.figmaContexts.map(({ viewport }) =>
+    getFigmaFileName(viewport),
+  );
 
   return {
-    packageVersion: 4,
+    packageVersion: 5,
     generatedAt: input.generatedAt,
     intendedUse:
       "Feature creation context package for an IDE coding agent. Use the edited ticket description as the source of truth, with optional normalized Figma context as visual guidance.",
@@ -215,7 +99,7 @@ export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
     })),
     figma: input.figmaContexts.map(({ viewport, context: figma }) => ({
       viewport,
-      ...getFigmaFileNames(viewport),
+      json: getFigmaFileName(viewport),
       fileKey: figma.fileKey,
       nodeId: figma.nodeId,
       fileName: figma.fileName,
@@ -298,12 +182,11 @@ export function buildAgentPrompt(input: TicketToCodePackageInput) {
     input.figmaContexts.length
       ? `Use ${input.figmaContexts
           .map(({ viewport }) => {
-            const names = getFigmaFileNames(viewport);
-            return `\`${names.markdown}\` and \`${names.json}\` as the ${getViewportLabel(viewport)}`;
+            return `\`${getFigmaFileName(viewport)}\` as the canonical ${getViewportLabel(viewport)} design source`;
           })
           .join(
             ", ",
-          )} for visual guidance. Apply each extraction to its named responsive viewport and reconcile shared components through the app's existing design system. Preserve viewport-specific layout direction, spacing, dimensions, text hierarchy, colors, border radii, detected control types, option counts, and option orientation where they map cleanly to the app's design system. If detected controls say radio-group, implement radio buttons, not a dropdown/select. Preserve vertical radio groups as vertical and horizontal radio groups as horizontal. Ask for human review when a Figma context is ambiguous or conflicts with existing UI conventions.`
+          )}. Apply each extraction only to its named responsive viewport and reconcile shared components through the app's existing design system. Read hierarchy node bounds, layout, constraints, component metadata, instance properties, and strokes directly from JSON. Use iconMeasurements glyph bounds for visible icon size and target bounds for the button or touch target; never infer one from the other. Preserve stroke color and weight where provided. Review extractionCoverage and ambiguityNotes before coding, and request human verification when geometry is missing, truncated, ambiguous, or conflicts with existing UI conventions. If detectedControls says radio-group, implement radio buttons, not a dropdown/select, preserving its option orientation.`
       : "No Figma context is attached. Follow existing app UI conventions and ask for human review when visual requirements are ambiguous.",
     input.figmaContexts.some(({ context }) => context.detectedControls.length)
       ? [
@@ -337,10 +220,6 @@ export function buildAgentPrompt(input: TicketToCodePackageInput) {
   ].join("\n");
 }
 
-export function buildFigmaContextMarkdown(figma: PackagedFigmaContext) {
-  return buildFigmaMarkdown(figma);
-}
-
 export function buildTicketToCodePackageFiles(input: TicketToCodePackageInput) {
   const files: TicketToCodePackageFiles = {
     "manifest.json": JSON.stringify(buildTicketToCodeManifest(input), null, 2),
@@ -349,9 +228,7 @@ export function buildTicketToCodePackageFiles(input: TicketToCodePackageInput) {
   };
 
   input.figmaContexts.forEach((figma) => {
-    const names = getFigmaFileNames(figma.viewport);
-    files[names.markdown] = buildFigmaContextMarkdown(figma);
-    files[names.json] = JSON.stringify(
+    files[getFigmaFileName(figma.viewport)] = JSON.stringify(
       { viewport: figma.viewport, ...figma.context },
       null,
       2,

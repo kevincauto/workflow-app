@@ -156,15 +156,15 @@ Optional AI demo mode:
 - `POST /api/mr/load` loads merge request context and Jira key candidates
 - `GET /api/mr/load` lists open merge requests for the configured GitLab group or project
 - `POST /api/jira/resolve` loads a selected Jira issue
-- `GET /api/jira/attachments/[ticketKey]/[attachmentId]` securely proxies a validated Jira image attachment for Ticket to Code previews and packaging
+- `GET /api/jira/attachments/[ticketKey]/[attachmentId]` securely proxies a validated Jira attachment for Ticket to Code previews and packaging
 - `POST /api/review/generate` runs bounded retrieval and review generation
 - `POST /api/comments/post` posts approved comments back to GitLab
 
 ## Ticket To Code Packages
 
-Ticket to Code can include Jira image attachments, browser-session image uploads, and up to two normalized Figma contexts. Jira credentials remain server-side; removing a Jira image from the page only excludes it from the current package and does not delete it from Jira.
+Ticket to Code can include Jira attachments, browser-session file uploads, and up to two normalized Figma contexts. Jira credentials remain server-side; removing a Jira attachment from the page only excludes it from the current package and does not delete it from Jira.
 
-Downloaded ZIP files contain the edited ticket requirements, an agent prompt, a manifest, selected image binaries under `images/`, and indexed Figma Markdown/JSON pairs when design contexts are attached. Browser-session uploads are cleared when the selected ticket changes or the page is reloaded.
+Downloaded ZIP files contain the edited ticket requirements, an agent prompt, a manifest, selected files under `attachments/`, and one normalized JSON file per attached Figma viewport. Browser-session uploads are cleared when the selected ticket changes or the page is reloaded.
 
 ## Local Pilot Metrics Logging
 
