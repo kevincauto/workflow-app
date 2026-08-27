@@ -192,65 +192,6 @@ export function FigmaContextPanel({
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
-                  Nodes Captured
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-100">
-                  {figma.extractionCoverage.nodesIncluded}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
-                  Missing Geometry
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-100">
-                  {figma.extractionCoverage.nodesMissingGeometry}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
-                  Icon Pairs
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-100">
-                  {figma.iconMeasurements.length}
-                </p>
-              </div>
-            </div>
-
-            {figma.iconMeasurements.length ? (
-              <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
-                  Icon Measurements
-                </p>
-                {figma.iconMeasurements.length > 8 ? (
-                  <p className="mt-2 text-xs text-slate-400">
-                    Showing 8 of {figma.iconMeasurements.length}
-                  </p>
-                ) : null}
-                <div className="mt-3 space-y-3">
-                  {figma.iconMeasurements.slice(0, 8).map((measurement) => (
-                    <div
-                      key={`${measurement.target.id}-${measurement.glyph.id}`}
-                      className="rounded-lg border border-white/10 bg-slate-950/35 p-3"
-                    >
-                      <p className="text-sm font-semibold text-slate-100">
-                        {measurement.target.name}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-slate-300">
-                        Glyph {measurement.glyph.bounds.width} x{" "}
-                        {measurement.glyph.bounds.height} · Target{" "}
-                        {measurement.target.bounds.width} x{" "}
-                        {measurement.target.bounds.height} ·{" "}
-                        {measurement.confidence} confidence
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
             {figma.colors.length ? (
               <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <p className="text-xs uppercase tracking-[0.16em] text-emerald-200">
@@ -259,11 +200,10 @@ export function FigmaContextPanel({
                 <div className="mt-3 flex flex-wrap gap-2">
                   {figma.colors.slice(0, 10).map((color) => (
                     <span
-                      key={`${color.nodeId}-${color.color}`}
-                      title={`${color.role ?? "color"}: ${color.node} · ${color.path}`}
+                      key={`${color.name}-${color.value}`}
                       className="rounded-full border border-white/15 bg-slate-950/45 px-3 py-1 text-xs text-slate-100"
                     >
-                      {color.color}
+                      {color.value}
                     </span>
                   ))}
                 </div>

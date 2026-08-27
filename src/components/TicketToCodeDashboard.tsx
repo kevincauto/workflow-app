@@ -464,7 +464,7 @@ export function TicketToCodeDashboard() {
         <SectionCard
           title="Ticket Requirements"
           eyebrow="Editable Criteria"
-          accent="purple"
+          accent="amber"
         >
           <TicketContextPanel
             ticket={selectedTicket}
@@ -545,13 +545,13 @@ export function TicketToCodeDashboard() {
         <SectionCard
           title="Package For Coding Agent"
           eyebrow="AI Packaged Info"
-          accent="amber"
+          accent="purple"
           actions={
             <button
               type="button"
               onClick={() => void handleDownloadPackage()}
               disabled={!selectedTicket || downloadingPackage}
-              className="rounded-xl border border-amber-200/60 bg-[#111827] px-5 py-3 text-sm font-bold text-amber-50 shadow-[0_14px_36px_rgba(17,24,39,0.35)] transition hover:border-amber-100 hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-purple-200/60 bg-[#111827] px-5 py-3 text-sm font-bold text-purple-50 shadow-[0_14px_36px_rgba(17,24,39,0.35)] transition hover:border-purple-100 hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {downloadingPackage
                 ? "Packaging..."
@@ -560,24 +560,24 @@ export function TicketToCodeDashboard() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
-              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
+            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Ticket
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
                 {selectedTicket?.key ?? "Not selected"}
               </p>
             </div>
-            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
-              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
+            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Requirements
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
                 {editedDescription.trim() ? "Ready" : "Empty"}
               </p>
             </div>
-            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
-              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
+            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Figma
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
@@ -589,8 +589,8 @@ export function TicketToCodeDashboard() {
                   .join(" + ") || "None"}
               </p>
             </div>
-            <div className="rounded-2xl border border-amber-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
-              <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
+            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Attachments
               </p>
               <p className="mt-2 text-base font-semibold text-slate-50">
