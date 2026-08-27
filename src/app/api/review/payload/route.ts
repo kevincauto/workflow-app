@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { buildOpenAiDebugPayload } from "@/lib/ai";
+import { buildAitriumDebugPayload } from "@/lib/ai";
 import { collectRetrievalContext } from "@/lib/retrieval";
 import type { RetrievalResult, ReviewRequestPayload } from "@/lib/types";
 
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const retrieval =
       body.retrieval ?? (await collectRetrievalContext(body.mergeRequest));
 
-    const payload = buildOpenAiDebugPayload({
+    const payload = buildAitriumDebugPayload({
       mergeRequest: body.mergeRequest,
       jiraIssue: body.jiraIssue,
       retrieval,

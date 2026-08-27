@@ -83,9 +83,12 @@ JIRA_ASSIGNEE_NAME=Kevin Cauto
 JIRA_DEVELOPER_FIELD_NAME=Developer
 JIRA_ESTIMATE_FIELD_ID=customfield_10016
 
-# AI provider
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.5
+# Aitrium (server-side only; do not use NEXT_PUBLIC_ prefixes)
+AITRIUM_BASE_URL=
+AITRIUM_API_TOKEN=
+AITRIUM_PERSONA_ID=
+AITRIUM_MODEL_ID=
+AITRIUM_USER_TIMEZONE=America/New_York
 ```
 
 You may need to be connected to the company VPN or org network for the app to
@@ -136,13 +139,17 @@ Optional Jira auth settings:
 
 Required for live review generation:
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL` recommended model: `gpt-5.5`
-- `OPENAI_BASE_URL` optional, defaults to OpenAI chat completions
+- `AITRIUM_BASE_URL` API origin only; the server appends `/v2/conversations/completion`
+- `AITRIUM_API_TOKEN` personal access token, kept server-side
+- `AITRIUM_PERSONA_ID`
+- `AITRIUM_MODEL_ID`
+- `AITRIUM_USER_TIMEZONE` optional, defaults to `America/New_York`
+
+Do not copy browser cookies or use `NEXT_PUBLIC_` variables for Aitrium settings.
 
 Optional AI demo mode:
 
-- `AI_REVIEW_MOCK_MODE=true` enables deterministic demo review findings when `OPENAI_API_KEY` is not configured. Without this flag, `/api/review/generate` returns a configuration error instead of silently falling back to mock results.
+- `AI_REVIEW_MOCK_MODE=true` enables deterministic demo review findings when Aitrium is not configured. Without this flag, `/api/review/generate` returns a configuration error instead of silently falling back to mock results.
 
 ## Routes
 

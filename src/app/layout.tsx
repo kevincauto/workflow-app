@@ -13,7 +13,10 @@ function getMissingLiveConfig() {
     ["GITLAB_TOKEN", process.env.GITLAB_TOKEN],
     ["JIRA_BASE_URL", process.env.JIRA_BASE_URL],
     ["JIRA_API_TOKEN", process.env.JIRA_API_TOKEN],
-    ["OPENAI_API_KEY", process.env.OPENAI_API_KEY],
+    ["AITRIUM_BASE_URL", process.env.AITRIUM_BASE_URL],
+    ["AITRIUM_API_TOKEN", process.env.AITRIUM_API_TOKEN],
+    ["AITRIUM_PERSONA_ID", process.env.AITRIUM_PERSONA_ID],
+    ["AITRIUM_MODEL_ID", process.env.AITRIUM_MODEL_ID],
   ]
     .filter(([, value]) => !value)
     .map(([name]) => name);
@@ -33,7 +36,7 @@ export default function RootLayout({
         {showDemoBanner ? (
           <div className="border-b border-orange-100/50 bg-[linear-gradient(180deg,#fed7aa_0%,#fb923c_100%)] px-4 py-3 text-center text-sm font-bold text-slate-950 shadow-[0_16px_40px_rgba(251,146,60,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] sm:text-base">
             Demo Mode: This site is not currently wired to live internal data or
-            the OpenAI API. Missing: {missingLiveConfig.join(", ")}.
+            Aitrium. Missing: {missingLiveConfig.join(", ")}.
           </div>
         ) : null}
         {children}

@@ -1,4 +1,10 @@
 import {
+  buildAitriumRequest,
+  isAitriumConfigured,
+  readAitriumCompletion,
+  requestAitriumStream,
+} from "@/lib/aitrium";
+import {
   normalizeFindingsAgainstDiff,
   normalizeMarkdownBackticks,
 } from "@/lib/lineMapping";
@@ -11,10 +17,6 @@ import type {
   ReviewResult,
   ReviewSummary,
 } from "@/lib/types";
-
-function isAiConfigured() {
-  return Boolean(process.env.OPENAI_API_KEY);
-}
 
 function isMockReviewModeEnabled() {
   return process.env.AI_REVIEW_MOCK_MODE === "true";
@@ -211,91 +213,40 @@ function parseAiResponse(payload: unknown): {
   };
 }
 
-const openAiSystemPrompt =
-  "You are a senior engineer performing a merge request review. Return only valid JSON.";
-
-function buildOpenAiRequestBody(input: {
+export function buildAitriumDebugPayload(input: {
   mergeRequest: MergeRequestContext;
   jiraIssue: JiraIssue | null;
   retrieval: RetrievalResult;
 }) {
-  return {
-    model: process.env.OPENAI_MODEL || "gpt-5.4-mini",
-    response_format: { type: "json_object" as const },
-    messages: [
-      {
-        role: "system" as const,
-        content: openAiSystemPrompt,
-      },
-      {
-        role: "user" as const,
-        content: buildReviewPrompt(input),
-      },
-    ],
-  };
-}
+  const request = buildAitriumRequest({ prompt: buildReviewPrompt(input) });
 
-export function buildOpenAiDebugPayload(input: {
-  mergeRequest: MergeRequestContext;
-  jiraIssue: JiraIssue | null;
-  retrieval: RetrievalResult;
-}) {
   return {
-    endpoint:
-      process.env.OPENAI_BASE_URL ||
-      "https://api.openai.com/v1/chat/completions",
+    endpoint: request.endpoint,
     method: "POST" as const,
     headers: {
+      Accept: "text/event-stream",
       "Content-Type": "application/json",
       Authorization: "Bearer [REDACTED]",
     },
-    body: buildOpenAiRequestBody(input),
+    body: request.body,
   };
 }
 
-async function requestOpenAiReview(input: {
+function parseCompletionJson(content: string) {
+  const fencedJson = content.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  return JSON.parse((fencedJson ?? content).trim()) as unknown;
+}
+
+async function requestAitriumReview(input: {
   mergeRequest: MergeRequestContext;
   jiraIssue: JiraIssue | null;
   retrieval: RetrievalResult;
 }): Promise<ReviewResult> {
-  const requestBody = buildOpenAiRequestBody(input);
-  const response = await fetch(
-    process.env.OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify(requestBody),
-    },
-  );
-
-  if (!response.ok) {
-    const responseText = await response.text();
-    const detail = responseText ? `: ${responseText.slice(0, 500)}` : "";
-
-    throw new AiReviewUnavailableError(
-      `AI review request failed with status ${response.status}${detail}`,
-    );
-  }
-
-  const payload = (await response.json()) as {
-    choices?: Array<{
-      message?: {
-        content?: string;
-      };
-    }>;
-  };
-
-  const content = payload.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new AiReviewUnavailableError(
-      "AI review response did not include content.",
-    );
-  }
-
-  const parsed = parseAiResponse(JSON.parse(content));
+  const response = await requestAitriumStream({
+    prompt: buildReviewPrompt(input),
+  });
+  const content = await readAitriumCompletion(response);
+  const parsed = parseAiResponse(parseCompletionJson(content));
   const rawFindings = (parsed.findings ?? []).slice(0, 10);
   const findings = normalizeFindingsAgainstDiff(
     input.mergeRequest,
@@ -315,13 +266,13 @@ export async function generateReview(input: {
   jiraIssue: JiraIssue | null;
   retrieval: RetrievalResult;
 }): Promise<ReviewResult> {
-  if (isAiConfigured()) {
-    return requestOpenAiReview(input);
+  if (isAitriumConfigured()) {
+    return requestAitriumReview(input);
   }
 
   if (!isMockReviewModeEnabled()) {
     throw new AiReviewUnavailableError(
-      "OPENAI_API_KEY is not configured. Add it to .env.local and restart the dev server, or set AI_REVIEW_MOCK_MODE=true to use demo review findings.",
+      "Aitrium is not configured. Add AITRIUM_BASE_URL, AITRIUM_API_TOKEN, AITRIUM_PERSONA_ID, and AITRIUM_MODEL_ID to .env.local and restart the dev server, or set AI_REVIEW_MOCK_MODE=true to use demo review findings.",
     );
   }
 
