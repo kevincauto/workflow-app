@@ -247,28 +247,47 @@ function collectColors(
   node: FigmaNode,
   tokens: Map<string, FigmaColorToken>,
   visited: { count: number },
+  parentPath = "",
+  semanticIconName: string | null = null,
 ) {
   if (
     visited.count >= maxTraversalNodes ||
-    tokens.size >= maxCollectedDesignTokens
+    tokens.size >= maxCollectedDesignTokens ||
+    !isVisibleNode(node)
   ) {
     return;
   }
 
   visited.count += 1;
+  const name = node.name ?? "Layer";
+  const path = parentPath ? `${parentPath} / ${name}` : name;
+  const iconName = name.startsWith("li:") ? name : semanticIconName;
+  const role = iconName
+    ? path.toLowerCase().includes(" / attachment / actions /")
+      ? "attachmentActionIcon"
+      : path.toLowerCase().includes(" / actions /")
+        ? "actionIcon"
+        : "icon"
+    : null;
 
   for (const fill of node.fills ?? []) {
     if (fill.type === "SOLID" && fill.visible !== false && fill.color) {
       const value = toHexColor(fill.color);
-      tokens.set(`${node.name ?? "Layer"}-${value}`, {
-        name: node.name ?? "Layer color",
+      const nodeId = node.id ?? path;
+      tokens.set(`${nodeId}-${value}`, {
+        name,
+        color: value,
         value,
+        nodeId,
+        path,
+        node: iconName ?? name,
+        role,
       });
     }
   }
 
   for (const child of node.children ?? []) {
-    collectColors(child, tokens, visited);
+    collectColors(child, tokens, visited, path, iconName);
   }
 }
 
@@ -654,6 +673,92 @@ function getIconMeasurements(
   };
 }
 
+function getImplementationSummary(
+  node: FigmaNode,
+  iconMeasurements: NormalizedFigmaContext["iconMeasurements"],
+): NormalizedFigmaContext["implementationSummary"] {
+  if (!iconMeasurements.length) {
+    return { actions: null };
+  }
+
+  const parentsByNodeId = new Map<string, FigmaNode>();
+  const pending: Array<{ node: FigmaNode; parent: FigmaNode | null }> = [
+    { node, parent: null },
+  ];
+  while (pending.length) {
+    const current = pending.pop();
+    if (!current) {
+      break;
+    }
+    if (current.node.id && current.parent) {
+      parentsByNodeId.set(current.node.id, current.parent);
+    }
+    for (const child of current.node.children ?? []) {
+      pending.push({ node: child, parent: current.node });
+    }
+  }
+
+  const containers = iconMeasurements.flatMap(({ target }) => {
+    const parent = parentsByNodeId.get(target.id);
+    return parent ? [parent] : [];
+  });
+  const uniqueNumbers = (values: Array<number | undefined>) => [
+    ...new Set(
+      values.filter((value): value is number => typeof value === "number"),
+    ),
+  ];
+  const layouts = [
+    ...new Set(
+      containers
+        .map((container) => container.layoutMode?.toLowerCase())
+        .filter(
+          (layout): layout is "horizontal" | "vertical" | "none" =>
+            layout === "horizontal" ||
+            layout === "vertical" ||
+            layout === "none",
+        ),
+    ),
+  ];
+  const gaps = uniqueNumbers(
+    containers.map((container) => container.itemSpacing),
+  );
+  const buttonSizes = uniqueNumbers(
+    iconMeasurements.flatMap(({ target }) =>
+      target.bounds.width === target.bounds.height ? [target.bounds.width] : [],
+    ),
+  );
+  const iconSizes = uniqueNumbers(
+    iconMeasurements.flatMap(({ glyph }) =>
+      glyph.bounds.width === glyph.bounds.height ? [glyph.bounds.width] : [],
+    ),
+  );
+
+  return {
+    actions: {
+      layout: layouts.length === 1 ? layouts[0] : null,
+      gap: gaps.length === 1 ? gaps[0] : null,
+      buttonSize: buttonSizes.length === 1 ? buttonSizes[0] : null,
+      iconSize: iconSizes.length === 1 ? iconSizes[0] : null,
+      icons: [
+        ...new Set(
+          iconMeasurements.map(({ glyph }) => glyph.name.replace(/^li:/i, "")),
+        ),
+      ],
+      sourceNodeIds: {
+        containers: [
+          ...new Set(
+            containers.flatMap((container) =>
+              container.id ? [container.id] : [],
+            ),
+          ),
+        ],
+        targets: iconMeasurements.map(({ target }) => target.id),
+        glyphs: iconMeasurements.map(({ glyph }) => glyph.id),
+      },
+    },
+  };
+}
+
 function normalizeName(value: string | undefined) {
   return (value ?? "").toLowerCase();
 }
@@ -1032,6 +1137,10 @@ function normalizeFigmaContext(input: {
     input.components,
     input.componentSets,
   );
+  const implementationSummary = getImplementationSummary(
+    input.node,
+    iconDetection.measurements,
+  );
 
   return {
     source: "live",
@@ -1041,6 +1150,7 @@ function normalizeFigmaContext(input: {
     fileName: input.fileName,
     selectedNodeName: input.node.name ?? input.fileName,
     selectedNodeType: input.node.type ?? "UNKNOWN",
+    implementationSummary,
     previewImageUrl: input.previewImageUrl,
     dimensions: {
       width: input.node.absoluteBoundingBox?.width ?? null,

@@ -63,7 +63,27 @@ export interface FigmaUrlParts {
 
 export interface FigmaColorToken {
   name: string;
+  color: string;
   value: string;
+  nodeId: string;
+  path: string;
+  node: string;
+  role: string | null;
+}
+
+export interface FigmaImplementationSummary {
+  actions: {
+    layout: "horizontal" | "vertical" | "none" | null;
+    gap: number | null;
+    buttonSize: number | null;
+    iconSize: number | null;
+    icons: string[];
+    sourceNodeIds: {
+      containers: string[];
+      targets: string[];
+      glyphs: string[];
+    };
+  } | null;
 }
 
 export interface FigmaTextNode {
@@ -219,6 +239,7 @@ export interface NormalizedFigmaContext {
   colors: FigmaColorToken[];
   text: FigmaTextNode[];
   radii: number[];
+  implementationSummary: FigmaImplementationSummary;
   hierarchy: FigmaLayerNode[];
   detectedControls: FigmaDetectedControl[];
   iconMeasurements: FigmaIconMeasurement[];

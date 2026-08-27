@@ -259,10 +259,11 @@ export function FigmaContextPanel({
                 <div className="mt-3 flex flex-wrap gap-2">
                   {figma.colors.slice(0, 10).map((color) => (
                     <span
-                      key={`${color.name}-${color.value}`}
+                      key={`${color.nodeId}-${color.color}`}
+                      title={`${color.role ?? "color"}: ${color.node} · ${color.path}`}
                       className="rounded-full border border-white/15 bg-slate-950/45 px-3 py-1 text-xs text-slate-100"
                     >
-                      {color.value}
+                      {color.color}
                     </span>
                   ))}
                 </div>
