@@ -419,6 +419,7 @@ export function ReviewDashboard() {
           title="Select a Merge Request or Paste a URL"
           eyebrow={<MedicalEyebrow>Select A Patient 🤒🤕😷</MedicalEyebrow>}
           className="relative z-40"
+          allowOverflow
           actions={
             <Link
               href="/"
