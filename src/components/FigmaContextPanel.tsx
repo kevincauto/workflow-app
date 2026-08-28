@@ -51,7 +51,7 @@ export function FigmaContextPanel({
           onChange={(event) => onUrlChange(event.target.value)}
           placeholder={`Paste the ${label.toLowerCase()} Figma URL`}
           aria-label={`${label} Figma URL`}
-          className="min-h-12 flex-1 rounded-xl border border-emerald-200/30 bg-[#07111f] px-4 text-sm text-white shadow-inner outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/30"
+          className="min-h-12 flex-1 rounded-lg border border-emerald-200/30 bg-[#07111f] px-4 text-sm text-white shadow-inner outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/30"
         />
         <div className="flex gap-3">
           <button
@@ -61,7 +61,7 @@ export function FigmaContextPanel({
               onExtract();
             }}
             disabled={loading || !figmaUrl.trim()}
-            className="rounded-2xl border border-emerald-300/50 bg-slate-950/25 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-slate-950/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-emerald-300/40 bg-emerald-300/10 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-300/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? `Extracting ${label}...` : `Extract ${label}`}
           </button>
@@ -218,7 +218,7 @@ export function FigmaContextPanel({
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-emerald-200/35 bg-white/[0.07] p-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-dashed border-emerald-200/30 bg-white/[0.05] p-4 text-sm text-slate-300">
           {label} Figma context is optional for the generated AI package.
         </div>
       )}

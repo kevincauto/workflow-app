@@ -37,7 +37,7 @@ export function TicketContextPanel({
 
   if (!ticket) {
     return (
-      <div className="rounded-2xl border border-dashed border-amber-200/35 bg-white/[0.07] p-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="rounded-lg border border-dashed border-amber-200/30 bg-white/[0.05] p-4 text-sm text-slate-300">
         Choose a ticket to load editable requirements.
       </div>
     );
@@ -46,7 +46,7 @@ export function TicketContextPanel({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Key
           </p>
@@ -75,7 +75,7 @@ export function TicketContextPanel({
             </button>
           </div>
         </div>
-        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Status
           </p>
@@ -83,7 +83,7 @@ export function TicketContextPanel({
             {ticket.status ?? "Unknown"}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Priority
           </p>
@@ -91,7 +91,7 @@ export function TicketContextPanel({
             {ticket.priority ?? "Unknown"}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Sprint
           </p>
@@ -102,7 +102,7 @@ export function TicketContextPanel({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Assignee
           </p>
@@ -110,7 +110,7 @@ export function TicketContextPanel({
             {ticket.assignee ?? "Unknown"}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/20 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Developer
           </p>
@@ -120,7 +120,7 @@ export function TicketContextPanel({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-amber-200/30 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="rounded-lg border border-amber-200/25 bg-white/[0.06] p-4">
         <p className="text-xs uppercase tracking-[0.18em] text-amber-200">
           {ticket.issueType ?? "Ticket"}
         </p>
@@ -138,7 +138,7 @@ export function TicketContextPanel({
             onDescriptionChange(event.currentTarget.value);
           }}
           rows={1}
-          className="mt-2 min-h-56 w-full resize-y overflow-hidden rounded-xl border border-amber-200/25 bg-[#07111f] px-4 py-3 text-sm leading-6 text-slate-100 shadow-inner outline-none transition placeholder:text-slate-400 focus:border-amber-300 focus:ring-2 focus:ring-amber-300/30"
+          className="mt-2 min-h-56 w-full resize-y overflow-hidden rounded-lg border border-amber-200/25 bg-[#07111f] px-4 py-3 text-sm leading-6 text-slate-100 shadow-inner outline-none transition placeholder:text-slate-400 focus:border-amber-300 focus:ring-2 focus:ring-amber-300/30"
           placeholder="Add requirements, acceptance criteria, and meeting notes."
         />
       </div>

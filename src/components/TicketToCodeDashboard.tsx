@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { strToU8, zipSync } from "fflate";
@@ -397,37 +398,44 @@ export function TicketToCodeDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#123044] bg-[linear-gradient(135deg,rgba(34,211,238,0.3)_0%,transparent_36%),linear-gradient(225deg,rgba(251,146,60,0.25)_0%,transparent_34%),linear-gradient(180deg,#173e50_0%,#10293d_52%,#0b2032_100%)] bg-fixed px-4 py-10 text-white sm:px-6 lg:px-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="relative overflow-hidden rounded-[28px] border border-cyan-300/30 bg-[linear-gradient(115deg,rgba(8,47,73,0.94),rgba(15,23,42,0.92)_50%,rgba(67,20,7,0.88))] p-6 shadow-[0_32px_100px_rgba(2,6,23,0.6)] backdrop-blur-xl sm:p-8">
-          <div
-            className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#67e8f9,#34d399,#fbbf24,#fb923c)]"
-            aria-hidden="true"
-          />
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.32),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(168,85,247,0.26),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.24),transparent_28%),linear-gradient(145deg,#202c40_0%,#324158_46%,#2a384d_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+        <header className="rounded-lg border border-white/12 bg-slate-950/55 px-5 py-5 shadow-[0_28px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:px-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/80">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
                 Workflow Apps
               </p>
-              <h1 className="mt-3 text-3xl font-semibold text-white sm:text-5xl">
+              <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">
                 Ticket to Code
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">
+              <p className="mt-3 max-w-2xl text-base leading-7 text-slate-300">
                 Package Jira requirements and optional Figma context into a
                 compact build brief for an IDE coding agent.
               </p>
             </div>
             <Link
               href="/"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:border-white/40 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-cyan-200/30 bg-cyan-300/12 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:border-cyan-100/45 hover:bg-cyan-300/20 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950"
             >
-              Back to Dashboard
+              <ArrowLeft aria-hidden="true" size={17} />
+              Dashboard
             </Link>
           </div>
         </header>
 
+        <div>
+          <h2 className="text-xl font-semibold text-white">
+            Create your build brief
+          </h2>
+          <p className="mt-1 text-sm text-slate-300">
+            Move through each source, then download a package ready for
+            implementation.
+          </p>
+        </div>
+
         {error ? (
-          <p className="rounded-2xl border border-rose-300/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+          <p className="rounded-lg border border-rose-300/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
             {error}
           </p>
         ) : null}
@@ -437,7 +445,7 @@ export function TicketToCodeDashboard() {
             {notices.map((notice, index) => (
               <p
                 key={`ticket-notice-${index}`}
-                className="rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-slate-100"
+                className="rounded-lg border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-slate-100"
               >
                 {notice}
               </p>
@@ -502,7 +510,7 @@ export function TicketToCodeDashboard() {
               onUploadedExplanationChange={updateUploadedAttachmentExplanation}
             />
           ) : (
-            <div className="rounded-2xl border border-dashed border-red-200/35 bg-white/[0.07] p-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+            <div className="rounded-lg border border-dashed border-red-200/30 bg-white/5 p-4 text-sm text-slate-300">
               Choose a ticket to load its attached images and files.
             </div>
           )}
@@ -551,8 +559,9 @@ export function TicketToCodeDashboard() {
               type="button"
               onClick={() => void handleDownloadPackage()}
               disabled={!selectedTicket || downloadingPackage}
-              className="rounded-xl border border-purple-200/60 bg-[#111827] px-5 py-3 text-sm font-bold text-purple-50 shadow-[0_14px_36px_rgba(17,24,39,0.35)] transition hover:border-purple-100 hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-cyan-200/30 bg-cyan-300/12 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:border-cyan-100/45 hover:bg-cyan-300/20 focus:outline-none focus:ring-2 focus:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <Download aria-hidden="true" size={17} />
               {downloadingPackage
                 ? "Packaging..."
                 : "Download AI Packaged Info"}
@@ -560,7 +569,7 @@ export function TicketToCodeDashboard() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+            <div className="rounded-lg border border-white/12 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Ticket
               </p>
@@ -568,7 +577,7 @@ export function TicketToCodeDashboard() {
                 {selectedTicket?.key ?? "Not selected"}
               </p>
             </div>
-            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+            <div className="rounded-lg border border-white/12 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Requirements
               </p>
@@ -576,7 +585,7 @@ export function TicketToCodeDashboard() {
                 {editedDescription.trim() ? "Ready" : "Empty"}
               </p>
             </div>
-            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+            <div className="rounded-lg border border-white/12 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Figma
               </p>
@@ -589,7 +598,7 @@ export function TicketToCodeDashboard() {
                   .join(" + ") || "None"}
               </p>
             </div>
-            <div className="rounded-2xl border border-purple-100/25 bg-[#111827]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+            <div className="rounded-lg border border-white/12 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
                 Attachments
               </p>

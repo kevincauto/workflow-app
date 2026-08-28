@@ -12,40 +12,28 @@ interface SectionCardProps {
 
 const accentStyles = {
   cyan: {
-    section: "border-cyan-300/45 bg-[rgba(20,92,125,0.72)]",
-    bar: "bg-cyan-300",
+    bar: "from-cyan-400 to-blue-500",
     eyebrow: "text-cyan-200",
-    title: "text-white",
   },
   amber: {
-    section: "border-amber-300/45 bg-[rgba(103,55,20,0.72)]",
-    bar: "bg-amber-300",
+    bar: "from-amber-300 to-orange-500",
     eyebrow: "text-amber-200",
-    title: "text-white",
   },
   emerald: {
-    section: "border-emerald-300/45 bg-[rgba(11,96,74,0.72)]",
-    bar: "bg-emerald-300",
+    bar: "from-emerald-400 to-teal-500",
     eyebrow: "text-emerald-200",
-    title: "text-white",
   },
   orange: {
-    section: "border-orange-300/50 bg-[rgba(143,64,34,0.72)]",
-    bar: "bg-orange-300",
+    bar: "from-orange-400 to-rose-500",
     eyebrow: "text-orange-200",
-    title: "text-white",
   },
   purple: {
-    section: "border-purple-300/50 bg-[rgba(91,52,121,0.72)]",
-    bar: "bg-purple-300",
+    bar: "from-violet-400 to-fuchsia-500",
     eyebrow: "text-purple-200",
-    title: "text-white",
   },
   red: {
-    section: "border-red-300/50 bg-[rgba(126,36,47,0.72)]",
-    bar: "bg-red-300",
+    bar: "from-rose-400 to-red-500",
     eyebrow: "text-red-200",
-    title: "text-white",
   },
 };
 
@@ -62,17 +50,17 @@ export function SectionCard({
 
   return (
     <section
-      className={`relative rounded-[28px] border p-6 shadow-[0_32px_100px_rgba(2,6,23,0.5)] backdrop-blur-xl ${allowOverflow ? "overflow-visible" : "overflow-hidden"} ${accentStyle?.section ?? "border-white/25 bg-[linear-gradient(180deg,rgba(255,255,255,0.24),rgba(255,255,255,0.15))]"} ${className ?? ""}`}
+      className={`relative rounded-lg border border-white/12 bg-slate-950/58 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.34),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl sm:p-6 ${allowOverflow ? "overflow-visible" : "overflow-hidden"} ${className ?? ""}`}
     >
       {accentStyle ? (
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-7 overflow-hidden rounded-t-[27px]"
+          className="pointer-events-none absolute left-5 top-0 h-1.5 w-24 overflow-hidden rounded-b-full sm:left-6"
           aria-hidden="true"
         >
-          <div className={`h-1 ${accentStyle.bar}`} />
+          <div className={`h-full bg-linear-to-r ${accentStyle.bar}`} />
         </div>
       ) : null}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           {eyebrow ? (
             <p
@@ -81,11 +69,7 @@ export function SectionCard({
               {eyebrow}
             </p>
           ) : null}
-          <h2
-            className={`mt-2 text-xl font-semibold ${accentStyle?.title ?? "text-orange-300"}`}
-          >
-            {title}
-          </h2>
+          <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>
         </div>
         {actions}
       </div>

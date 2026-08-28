@@ -53,7 +53,7 @@ export function TicketSelector({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-cyan-200/25 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <div className="rounded-lg border border-cyan-200/20 bg-white/[0.06] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-cyan-200/80">
@@ -64,7 +64,7 @@ export function TicketSelector({
             type="button"
             onClick={onRefresh}
             disabled={loading}
-            className="min-h-11 rounded-xl border border-white/25 bg-[#07111f] px-4 py-2.5 text-sm font-semibold text-slate-50 shadow-sm transition hover:border-cyan-200/40 hover:bg-[#0b192b] disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-11 rounded-lg border border-white/20 bg-[#07111f] px-4 py-2.5 text-sm font-semibold text-slate-50 shadow-sm transition hover:border-cyan-200/40 hover:bg-[#0b192b] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Refreshing..." : "Refresh Tickets"}
           </button>
@@ -75,7 +75,7 @@ export function TicketSelector({
             type="button"
             onClick={() => setIsPickerOpen((current) => !current)}
             disabled={loading || tickets.length === 0}
-            className="min-h-14 w-full rounded-xl border border-cyan-200/30 bg-[#07111f] px-4 py-3 text-left shadow-[0_8px_24px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.06)] outline-none transition hover:border-cyan-200/55 hover:bg-[#0b192b] focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-14 w-full rounded-lg border border-cyan-200/25 bg-[#07111f] px-4 py-3 text-left shadow-[0_8px_24px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.06)] outline-none transition hover:border-cyan-200/55 hover:bg-[#0b192b] focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:cursor-not-allowed disabled:opacity-60"
             aria-expanded={isPickerOpen}
             aria-haspopup="listbox"
           >
@@ -129,7 +129,7 @@ export function TicketSelector({
           </button>
 
           {isPickerOpen ? (
-            <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-50 overflow-hidden rounded-2xl border border-cyan-200/35 bg-[#050b14] shadow-[0_24px_90px_rgba(2,6,23,0.8)]">
+            <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-50 overflow-hidden rounded-lg border border-cyan-200/35 bg-[#050b14] shadow-[0_24px_90px_rgba(2,6,23,0.8)]">
               <div className="space-y-3 border-b border-white/8 px-4 py-3">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs uppercase tracking-[0.18em] text-cyan-200/80">
@@ -149,7 +149,7 @@ export function TicketSelector({
                   value={ticketFilter}
                   onChange={(event) => setTicketFilter(event.target.value)}
                   placeholder="Filter by key, summary, sprint, or assignee"
-                  className="min-h-11 w-full rounded-xl border border-cyan-200/25 bg-[#101c2e] px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                  className="min-h-11 w-full rounded-lg border border-cyan-200/25 bg-[#101c2e] px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
                   autoFocus
                 />
               </div>
@@ -166,7 +166,7 @@ export function TicketSelector({
                           onSelectTicket(ticket.key);
                           setIsPickerOpen(false);
                         }}
-                        className={`mb-2 w-full rounded-2xl border px-4 py-3 text-left transition last:mb-0 ${
+                        className={`mb-2 w-full rounded-lg border px-4 py-3 text-left transition last:mb-0 ${
                           isSelected
                             ? "border-cyan-300/35 bg-cyan-300/10"
                             : "border-white/8 bg-white/4 hover:border-white/15 hover:bg-white/8"
@@ -199,7 +199,7 @@ export function TicketSelector({
                     );
                   })
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-200">
+                  <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-slate-200">
                     {tickets.length === 0
                       ? "No assigned or developer tickets were returned from Jira."
                       : "No tickets match that filter."}
@@ -221,7 +221,7 @@ export function TicketSelector({
       </div>
 
       {selectedKey ? null : (
-        <div className="rounded-2xl border border-dashed border-cyan-200/30 bg-white/[0.07] p-4 text-sm text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="rounded-lg border border-dashed border-cyan-200/30 bg-white/[0.05] p-4 text-sm text-slate-300">
           Assigned or developer tickets will appear here when Jira is
           configured.
         </div>
