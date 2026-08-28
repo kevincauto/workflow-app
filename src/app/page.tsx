@@ -23,7 +23,7 @@ type WorkflowApp =
 
 const workflowApps: WorkflowApp[] = [
   {
-    name: "Ticket to Code",
+    name: "Code Hero",
     description:
       "Turn ticket context, requirements, and acceptance criteria into a focused implementation starting point.",
     href: "/ticket-to-code",
