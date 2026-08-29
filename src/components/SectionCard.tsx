@@ -5,6 +5,7 @@ interface SectionCardProps {
   eyebrow?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
+  footer?: ReactNode;
   className?: string;
   accent?: "cyan" | "amber" | "emerald" | "orange" | "purple" | "red";
   allowOverflow?: boolean;
@@ -42,6 +43,7 @@ export function SectionCard({
   eyebrow,
   actions,
   children,
+  footer,
   className,
   accent,
   allowOverflow = false,
@@ -50,7 +52,7 @@ export function SectionCard({
 
   return (
     <section
-      className={`relative rounded-lg border border-white/12 bg-slate-950/58 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.34),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl sm:p-6 ${allowOverflow ? "overflow-visible" : "overflow-hidden"} ${className ?? ""}`}
+      className={`relative flex flex-col rounded-lg border border-white/12 bg-slate-950/58 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.34),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl sm:p-6 ${allowOverflow ? "overflow-visible" : "overflow-hidden"} ${className ?? ""}`}
     >
       {accentStyle ? (
         <div
@@ -73,7 +75,10 @@ export function SectionCard({
         </div>
         {actions}
       </div>
-      {children}
+      <div className="flex-1">{children}</div>
+      {footer ? (
+        <div className="mt-6 border-t border-white/10 pt-4">{footer}</div>
+      ) : null}
     </section>
   );
 }

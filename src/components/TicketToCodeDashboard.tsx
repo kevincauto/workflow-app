@@ -435,6 +435,31 @@ export function TicketToCodeDashboard() {
     (step) => step.id === activeStep,
   );
 
+  function renderStepNavigation() {
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setActiveStep(workflowSteps[activeStepIndex - 1].id)}
+          disabled={activeStepIndex === 0}
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-white/15 bg-slate-950/35 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-950/55 disabled:invisible"
+        >
+          <ChevronLeft aria-hidden="true" size={16} />
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveStep(workflowSteps[activeStepIndex + 1].id)}
+          disabled={activeStepIndex === workflowSteps.length - 1}
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-cyan-200/30 bg-cyan-300/12 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/20 disabled:invisible"
+        >
+          Next
+          <ChevronRight aria-hidden="true" size={16} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.32),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(168,85,247,0.26),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.24),transparent_28%),linear-gradient(145deg,#29384e_0%,#3d5069_46%,#34465d_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-375 flex-col gap-6">
@@ -490,55 +515,60 @@ export function TicketToCodeDashboard() {
         <div className="grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)_280px] xl:grid-cols-[240px_minmax(0,1fr)_300px]">
           <nav
             aria-label="Code package steps"
-            className="grid grid-cols-1 gap-2 rounded-lg border border-white/12 bg-slate-950/58 p-3 shadow-[0_22px_70px_rgba(2,6,23,0.3)] backdrop-blur-xl sm:grid-cols-2 lg:sticky lg:top-6 lg:grid-cols-1"
+            className="rounded-lg border border-white/12 bg-slate-950/58 p-3 shadow-[0_22px_70px_rgba(2,6,23,0.3)] backdrop-blur-xl lg:sticky lg:top-6"
           >
-            <div className="mb-1 px-2 sm:col-span-2 lg:col-span-1">
+            <div className="mb-3 px-2">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                 Code package
               </p>
             </div>
-            {workflowSteps.map((step, index) => {
-              const isActive = step.id === activeStep;
-              const isComplete = completedSteps[step.id];
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              {workflowSteps.map((step, index) => {
+                const isActive = step.id === activeStep;
+                const isComplete = completedSteps[step.id];
 
-              return (
-                <button
-                  key={step.id}
-                  type="button"
-                  onClick={() => setActiveStep(step.id)}
-                  aria-current={isActive ? "step" : undefined}
-                  className={`group flex min-h-16 items-center gap-3 rounded-lg border px-3 py-2 text-left transition ${
-                    isActive
-                      ? "border-cyan-300/35 bg-cyan-300/12"
-                      : "border-transparent hover:border-white/10 hover:bg-white/5"
-                  }`}
-                >
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold ${
-                      isComplete
-                        ? "border-emerald-300/25 bg-emerald-300/12 text-emerald-200"
-                        : isActive
-                          ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
-                          : "border-white/10 bg-white/5 text-slate-400"
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => setActiveStep(step.id)}
+                    aria-current={isActive ? "step" : undefined}
+                    className={`group flex min-h-16 items-center gap-3 rounded-lg border px-3 py-2 text-left transition ${
+                      isActive
+                        ? "border-cyan-300/35 bg-cyan-300/12"
+                        : "border-transparent hover:border-white/10 hover:bg-white/5"
                     }`}
                   >
-                    {isComplete ? (
-                      <Check aria-hidden="true" size={15} />
-                    ) : (
-                      String(index + 1).padStart(2, "0")
-                    )}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-white">
-                      {step.label}
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold ${
+                        isComplete
+                          ? "border-emerald-300/25 bg-emerald-300/12 text-emerald-200"
+                          : isActive
+                            ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                            : "border-white/10 bg-white/5 text-slate-400"
+                      }`}
+                    >
+                      {isComplete ? (
+                        <Check aria-hidden="true" size={15} />
+                      ) : (
+                        String(index + 1).padStart(2, "0")
+                      )}
                     </span>
-                    <span className="mt-0.5 block text-xs text-slate-400">
-                      {step.eyebrow}
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-white">
+                        {step.label}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-slate-400">
+                        {step.eyebrow}
+                      </span>
                     </span>
-                  </span>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 border-t border-white/10 px-1 pt-4">
+              {renderStepNavigation()}
+            </div>
           </nav>
 
           <div className="min-w-0 space-y-4">
@@ -549,6 +579,7 @@ export function TicketToCodeDashboard() {
                 className="relative z-40 min-h-140"
                 accent="cyan"
                 allowOverflow
+                footer={renderStepNavigation()}
               >
                 <p className="mb-5 max-w-2xl text-sm leading-6 text-slate-300">
                   Start with the source of truth. Selecting a ticket loads its
@@ -570,6 +601,7 @@ export function TicketToCodeDashboard() {
                 eyebrow="Step 2 of 4"
                 className="min-h-140"
                 accent="amber"
+                footer={renderStepNavigation()}
               >
                 <TicketContextPanel
                   ticket={selectedTicket}
@@ -585,6 +617,7 @@ export function TicketToCodeDashboard() {
                 eyebrow="Step 3 of 4"
                 className="min-h-140"
                 accent="red"
+                footer={renderStepNavigation()}
               >
                 {selectedTicket ? (
                   <AttachedFilesPanel
@@ -626,6 +659,7 @@ export function TicketToCodeDashboard() {
                 eyebrow="Step 4 of 4 · Optional"
                 className="min-h-140"
                 accent="emerald"
+                footer={renderStepNavigation()}
               >
                 <div className="space-y-6">
                   <p className="text-sm leading-6 text-slate-300">
@@ -661,31 +695,6 @@ export function TicketToCodeDashboard() {
                 </div>
               </SectionCard>
             ) : null}
-
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setActiveStep(workflowSteps[activeStepIndex - 1].id)
-                }
-                disabled={activeStepIndex === 0}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/15 bg-slate-950/35 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-950/55 disabled:invisible"
-              >
-                <ChevronLeft aria-hidden="true" size={17} />
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setActiveStep(workflowSteps[activeStepIndex + 1].id)
-                }
-                disabled={activeStepIndex === workflowSteps.length - 1}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-cyan-200/30 bg-cyan-300/12 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/20 disabled:invisible"
-              >
-                Next
-                <ChevronRight aria-hidden="true" size={17} />
-              </button>
-            </div>
           </div>
 
           <aside className="rounded-lg border border-white/12 bg-slate-950/70 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.38)] backdrop-blur-xl lg:sticky lg:top-6">
