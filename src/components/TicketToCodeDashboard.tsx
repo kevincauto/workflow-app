@@ -475,7 +475,7 @@ export function TicketToCodeDashboard() {
                 </span>
               </div>
               <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">
-                Code Hero
+                Cauto's Code Hero
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
                 Suit up with Jira requirements, reference files, and Figma
