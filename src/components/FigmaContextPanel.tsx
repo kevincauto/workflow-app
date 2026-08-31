@@ -198,9 +198,9 @@ export function FigmaContextPanel({
                   Colors
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {figma.colors.slice(0, 10).map((color) => (
+                  {figma.colors.slice(0, 10).map((color, index) => (
                     <span
-                      key={`${color.name}-${color.value}`}
+                      key={`${color.name}-${color.value}-${index}`}
                       className="rounded-full border border-white/15 bg-slate-950/45 px-3 py-1 text-xs text-slate-100"
                     >
                       {color.value}
