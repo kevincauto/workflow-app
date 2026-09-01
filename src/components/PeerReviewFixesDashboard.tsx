@@ -218,6 +218,7 @@ export function PeerReviewFixesDashboard() {
           title="Select a Merge Request"
           eyebrow={<WorkflowEyebrow>Choose Review Feedback</WorkflowEyebrow>}
           className="relative z-40"
+          allowOverflow
         >
           <MrUrlForm
             value={mrUrl}
