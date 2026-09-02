@@ -4,6 +4,7 @@ interface ReviewControlsProps {
   onGenerate: () => void;
   onPackageData: () => void;
   loading: boolean;
+  packaging: boolean;
   canGenerate: boolean;
 }
 
@@ -11,6 +12,7 @@ export function ReviewControls({
   onGenerate,
   onPackageData,
   loading,
+  packaging,
   canGenerate,
 }: ReviewControlsProps) {
   const [dotCount, setDotCount] = useState(0);
@@ -59,10 +61,12 @@ export function ReviewControls({
         <button
           type="button"
           onClick={onPackageData}
-          disabled={!canGenerate}
+          disabled={!canGenerate || packaging}
           className="min-h-13 rounded-2xl border border-cyan-300/45 bg-slate-950/35 px-5 py-3 text-sm font-bold text-cyan-50 transition hover:-translate-y-0.5 hover:bg-slate-950/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
-          Package Data for Github Copilot
+          {packaging
+            ? "Building Package..."
+            : "Package Data for Github Copilot"}
         </button>
       </div>
     </div>

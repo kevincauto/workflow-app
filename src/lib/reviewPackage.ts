@@ -1,9 +1,20 @@
-import type { ChangedFile, JiraIssue, MergeRequestContext } from "@/lib/types";
+import type {
+  ChangedFile,
+  FigmaViewport,
+  JiraIssue,
+  MergeRequestContext,
+  PackageAttachment,
+  PackagedFigmaContext,
+} from "@/lib/types";
+
+export type ReviewPackageFiles = Record<string, string | Uint8Array>;
 
 export interface ReviewPackageInput {
   generatedAt: string;
   mergeRequest: MergeRequestContext;
   jiraIssue: JiraIssue | null;
+  attachments: PackageAttachment[];
+  figmaContexts: PackagedFigmaContext[];
 }
 
 interface ManifestChangedFile {
@@ -48,6 +59,38 @@ export function getReviewPackageFolderName(mergeRequest: MergeRequestContext) {
   return `review-package-${safeProject}-mr-${mergeRequest.iid}`;
 }
 
+export function getFigmaFileName(viewport: FigmaViewport) {
+  return `figma-context-${viewport}.json`;
+}
+
+function getFileExtension(filename: string) {
+  const extension = filename.match(/\.([a-zA-Z0-9]{1,10})$/)?.[1];
+  return extension ? `.${extension.toLowerCase()}` : "";
+}
+
+export function buildPackagedAttachments(attachments: PackageAttachment[]) {
+  const usedNames = new Set<string>();
+
+  return attachments.map((attachment, index) => {
+    const extension = getFileExtension(attachment.filename);
+    const filenameWithoutExtension = extension
+      ? attachment.filename.slice(0, -extension.length)
+      : attachment.filename;
+    const baseName =
+      sanitizePackageName(filenameWithoutExtension) || `file-${index + 1}`;
+    let packagedName = `${baseName}${extension}`;
+    let suffix = 2;
+
+    while (usedNames.has(packagedName)) {
+      packagedName = `${baseName}-${suffix}${extension}`;
+      suffix += 1;
+    }
+
+    usedNames.add(packagedName);
+    return { attachment, path: `attachments/${packagedName}` };
+  });
+}
+
 function countDiffLines(files: ChangedFile[]) {
   return files.reduce(
     (totals, file) => {
@@ -75,21 +118,28 @@ export function buildReviewPackageManifest(input: ReviewPackageInput) {
   const { mergeRequest, jiraIssue } = input;
   const diffStats = countDiffLines(mergeRequest.changedFiles);
   const repositoryContext = mergeRequest.repositoryContext;
+  const packagedAttachments = buildPackagedAttachments(input.attachments);
+  const figmaFiles = input.figmaContexts.map(({ viewport }) =>
+    getFigmaFileName(viewport),
+  );
 
   return {
-    packageVersion: 1,
+    packageVersion: 2,
     generatedAt: input.generatedAt,
     packageFiles: [
       "manifest.json",
       "changes.patch",
       "summary.md",
       "agent-prompt.md",
+      ...figmaFiles,
+      ...packagedAttachments.map(({ path }) => path),
     ],
     intendedUse:
       "Code review context package for an IDE coding agent. Inspect live files when the branch is checked out; use changes.patch for exact diff hunks.",
     sourceSystems: {
       mergeRequest: "GitLab REST API",
       issue: jiraIssue ? "Jira REST API" : null,
+      figma: input.figmaContexts.length ? "Figma REST API" : null,
     },
     mergeRequest: {
       source: mergeRequest.source,
@@ -115,6 +165,26 @@ export function buildReviewPackageManifest(input: ReviewPackageInput) {
           source: jiraIssue.source,
         }
       : null,
+    attachments: packagedAttachments.map(({ attachment, path }) => ({
+      source: attachment.source,
+      originalFilename: attachment.filename,
+      packagedPath: path,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      jiraAttachmentId: attachment.jiraAttachmentId,
+      explanation: attachment.explanation,
+    })),
+    figma: input.figmaContexts.map(({ viewport, context: figma }) => ({
+      viewport,
+      json: getFigmaFileName(viewport),
+      fileKey: figma.fileKey,
+      nodeId: figma.nodeId,
+      fileName: figma.fileName,
+      selectedNodeName: figma.selectedNodeName,
+      selectedNodeType: figma.selectedNodeType,
+      previewImageUrl: figma.previewImageUrl,
+      detectedControlCount: figma.detectedControls.length,
+    })),
     changedFiles: mergeRequest.changedFiles.map<ManifestChangedFile>(
       (file) => ({
         oldPath: file.oldPath,
@@ -162,6 +232,8 @@ export function buildReviewPackageManifest(input: ReviewPackageInput) {
       "agent-prompt.md contains lightweight review instructions and intentionally excludes full file contents.",
       "When the source branch is checked out locally, prefer inspecting live files for complete implementation context.",
       "Validation and focused command suggestions live under repositoryContext as the canonical source of truth.",
+      "Jira and uploaded attachment binaries are stored under attachments/ and contain no credentials.",
+      "Figma context is normalized and intentionally compact; raw Figma payloads are excluded and preview image URLs may expire.",
     ],
   };
 }
@@ -292,7 +364,9 @@ function buildFilePatch(file: ChangedFile) {
   return buildHunkOnlyPatch(file);
 }
 
-export function buildReviewPackagePatch(input: ReviewPackageInput) {
+export function buildReviewPackagePatch(
+  input: Pick<ReviewPackageInput, "mergeRequest">,
+) {
   return input.mergeRequest.changedFiles
     .map(buildFilePatch)
     .filter(Boolean)
@@ -362,6 +436,30 @@ export function buildReviewPackageSummary(input: ReviewPackageInput) {
         ].join("\n")
       : "No Jira issue context was loaded for this package.",
     "",
+    "## Attached Files",
+    "",
+    input.attachments.length
+      ? buildPackagedAttachments(input.attachments)
+          .map(({ attachment, path }) =>
+            [
+              `- \`${path}\` (${attachment.source}, ${attachment.mimeType})`,
+              `  - Context: ${markdownText(attachment.explanation, "No additional context provided.")}`,
+            ].join("\n"),
+          )
+          .join("\n")
+      : "No files were attached to this package.",
+    "",
+    "## Design Context",
+    "",
+    input.figmaContexts.length
+      ? input.figmaContexts
+          .map(
+            ({ viewport, context }) =>
+              `- \`${getFigmaFileName(viewport)}\` (${viewport}): ${context.fileName ?? "Unknown file"} / ${context.selectedNodeName ?? "Unknown node"}`,
+          )
+          .join("\n")
+      : "No Figma design context was attached to this package.",
+    "",
     "## Changed Files",
     "",
     ...mergeRequest.changedFiles.map(
@@ -406,6 +504,25 @@ export function buildReviewPackageAgentPrompt(input: ReviewPackageInput) {
     "- Full file contents are intentionally excluded from this package.",
     "- If a diff is unavailable, collapsed, or too large, do not infer that the file is empty, missing, or broken based only on the package payload.",
     "",
+    "## Attachment References",
+    "",
+    input.attachments.length
+      ? "Inspect every supported file under `attachments/` as review context. Before interpreting a file, read its matching Context entry in `summary.md` or explanation in `manifest.json`. Use the manifest to distinguish Jira attachments from session uploads. Treat attachments as supporting requirement evidence and flag implementation mismatches against them."
+      : "No attachment references are included.",
+    "",
+    "## Design Context",
+    "",
+    input.figmaContexts.length
+      ? `Use ${input.figmaContexts
+          .map(
+            ({ viewport }) =>
+              `\`${getFigmaFileName(viewport)}\` as the expected ${viewport} design`,
+          )
+          .join(
+            ", ",
+          )}. Apply each extraction only to its named responsive viewport and report visual or structural mismatches as review findings. Read implementationSummary first, then hierarchy, colors, and iconMeasurements for supporting geometry. Respect extractionCoverage and ambiguityNotes: do not raise findings from geometry that is missing, truncated, or flagged ambiguous.`
+      : "No Figma design context is attached. Do not raise visual-fidelity findings.",
+    "",
     "## Review Priorities",
     "",
     "Focus on correctness, logic, security, error handling, tests, Jira requirement alignment, maintainability, and performance.",
@@ -448,4 +565,29 @@ export function buildReviewPackageAgentPrompt(input: ReviewPackageInput) {
     "- Mark the finding as a general merge request comment when it cannot be safely anchored to a specific line.",
     "",
   ].join("\n");
+}
+
+export function buildReviewPackageFiles(input: ReviewPackageInput) {
+  const files: ReviewPackageFiles = {
+    "manifest.json": JSON.stringify(buildReviewPackageManifest(input), null, 2),
+    "changes.patch": buildReviewPackagePatch(input),
+    "summary.md": buildReviewPackageSummary(input),
+    "agent-prompt.md": buildReviewPackageAgentPrompt(input),
+  };
+
+  input.figmaContexts.forEach((figma) => {
+    files[getFigmaFileName(figma.viewport)] = JSON.stringify(
+      { viewport: figma.viewport, ...figma.context },
+      null,
+      2,
+    );
+  });
+
+  for (const { attachment, path } of buildPackagedAttachments(
+    input.attachments,
+  )) {
+    files[path] = attachment.data;
+  }
+
+  return files;
 }

@@ -54,6 +54,10 @@ export interface ListAssignedJiraTicketsResponse {
   notices: string[];
 }
 
+export interface ListJiraAttachmentsResponse {
+  attachments: JiraAttachment[];
+}
+
 export interface FigmaUrlParts {
   fileKey: string;
   nodeId: string | null;

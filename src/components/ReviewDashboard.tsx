@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { strToU8, zipSync } from "fflate";
 
+import {
+  AttachedFilesPanel,
+  type UploadedTicketAttachment,
+} from "@/components/AttachedFilesPanel";
+import { FigmaContextPanel } from "@/components/FigmaContextPanel";
 import { FindingsList } from "@/components/FindingsList";
 import { HeroLogo } from "@/components/HeroLogo";
 import { JiraPanel } from "@/components/JiraPanel";
@@ -14,23 +19,51 @@ import { ReviewControls } from "@/components/ReviewControls";
 import { ReviewSummary } from "@/components/ReviewSummary";
 import { SectionCard } from "@/components/SectionCard";
 import {
-  buildReviewPackageAgentPrompt,
-  buildReviewPackageManifest,
-  buildReviewPackagePatch,
-  buildReviewPackageSummary,
+  buildReviewPackageFiles,
   getReviewPackageFolderName,
+  type ReviewPackageInput,
 } from "@/lib/reviewPackage";
 import type {
+  FigmaExtractResponse,
+  FigmaViewport,
+  JiraAttachment,
   JiraCandidate,
   JiraIssue,
+  ListJiraAttachmentsResponse,
   ListOpenMergeRequestsResponse,
   LoadMrResponse,
   MergeRequestContext,
+  NormalizedFigmaContext,
   OpenMergeRequestOption,
+  PackageAttachment,
   PostResult,
   ReviewFinding,
   ReviewResult,
 } from "@/lib/types";
+
+interface FigmaContextSlot {
+  id: string;
+  viewport: FigmaViewport;
+  url: string;
+  figma: NormalizedFigmaContext | null;
+  loading: boolean;
+  error: string | null;
+}
+
+function createFigmaSlot(viewport: FigmaViewport): FigmaContextSlot {
+  return {
+    id: `figma-${viewport}`,
+    viewport,
+    url: "",
+    figma: null,
+    loading: false,
+    error: null,
+  };
+}
+
+function createFigmaSlots() {
+  return [createFigmaSlot("desktop"), createFigmaSlot("mobile")];
+}
 
 async function postJson<T>(url: string, payload: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -115,14 +148,30 @@ export function ReviewDashboard() {
   const [postResults, setPostResults] = useState<PostResult[]>([]);
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [jiraAttachments, setJiraAttachments] = useState<JiraAttachment[]>([]);
+  const [loadingJiraAttachments, setLoadingJiraAttachments] = useState(false);
+  const [uploadedAttachments, setUploadedAttachments] = useState<
+    UploadedTicketAttachment[]
+  >([]);
+  const [excludedJiraAttachmentIds, setExcludedJiraAttachmentIds] = useState<
+    Set<string>
+  >(new Set());
+  const [jiraAttachmentExplanations, setJiraAttachmentExplanations] = useState<
+    Record<string, string>
+  >({});
+  const [figmaSlots, setFigmaSlots] =
+    useState<FigmaContextSlot[]>(createFigmaSlots);
   const [loadingMr, setLoadingMr] = useState(false);
   const [loadingJira, setLoadingJira] = useState(false);
   const [loadingReview, setLoadingReview] = useState(false);
   const [posting, setPosting] = useState(false);
   const [loadingOpenMrs, setLoadingOpenMrs] = useState(false);
   const [downloadingPayload, setDownloadingPayload] = useState(false);
+  const [packagingData, setPackagingData] = useState(false);
   const [confirmingReviewGeneration, setConfirmingReviewGeneration] =
     useState(false);
+  const uploadedAttachmentsRef = useRef<UploadedTicketAttachment[]>([]);
+  const jiraKey = jiraIssue?.key ?? null;
 
   async function loadOpenMergeRequests() {
     setLoadingOpenMrs(true);
@@ -157,6 +206,79 @@ export function ReviewDashboard() {
     return () => window.clearTimeout(timeoutId);
   }, []);
 
+  useEffect(() => {
+    if (!jiraKey) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      setLoadingJiraAttachments(true);
+
+      try {
+        const response = await fetch(
+          `/api/jira/attachments/${encodeURIComponent(jiraKey)}`,
+          { cache: "no-store" },
+        );
+        const data = (await response.json()) as ListJiraAttachmentsResponse & {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to load Jira attachments.");
+        }
+
+        if (!cancelled) {
+          setJiraAttachments(data.attachments);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          const message =
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load Jira attachments.";
+          setNotices((current) => [
+            ...current.filter(
+              (notice) => !notice.startsWith("Jira attachments:"),
+            ),
+            `Jira attachments: ${message}`,
+          ]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingJiraAttachments(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jiraKey]);
+
+  useEffect(
+    () => () => {
+      for (const attachment of uploadedAttachmentsRef.current) {
+        URL.revokeObjectURL(attachment.previewUrl);
+      }
+    },
+    [],
+  );
+
+  function resetAttachmentContext() {
+    for (const attachment of uploadedAttachmentsRef.current) {
+      URL.revokeObjectURL(attachment.previewUrl);
+    }
+
+    uploadedAttachmentsRef.current = [];
+    setUploadedAttachments([]);
+    setJiraAttachments([]);
+    setExcludedJiraAttachmentIds(new Set());
+    setJiraAttachmentExplanations({});
+    setFigmaSlots(createFigmaSlots());
+  }
+
   function handleSelectOpenMr(value: string) {
     setSelectedOpenMr(value);
 
@@ -171,6 +293,7 @@ export function ReviewDashboard() {
     setReviewDurationSeconds(null);
     setPostResults([]);
     setLoadingMr(true);
+    resetAttachmentContext();
 
     try {
       const data = await postJson<LoadMrResponse>("/api/mr/load", { mrUrl });
@@ -197,6 +320,7 @@ export function ReviewDashboard() {
 
     setError(null);
     setLoadingJira(true);
+    resetAttachmentContext();
 
     try {
       const data = await postJson<{ jiraIssue: JiraIssue }>(
@@ -260,46 +384,235 @@ export function ReviewDashboard() {
     }
   }
 
-  function handlePackageDataForCopilot() {
+  function handleAddAttachmentFiles(files: File[]) {
+    setUploadedAttachments((current) => {
+      const signatures = new Set(
+        current.map(
+          (attachment) =>
+            `${attachment.file.name}:${attachment.file.size}:${attachment.file.lastModified}:${attachment.file.type}`,
+        ),
+      );
+      const additions = files.flatMap((file) => {
+        const signature = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+
+        if (signatures.has(signature)) {
+          return [];
+        }
+
+        signatures.add(signature);
+        return [
+          {
+            id: crypto.randomUUID(),
+            file,
+            previewUrl: URL.createObjectURL(file),
+            explanation: "",
+          },
+        ];
+      });
+      const next = [...current, ...additions];
+      uploadedAttachmentsRef.current = next;
+      return next;
+    });
+  }
+
+  function handleRemoveUploadedAttachment(attachmentId: string) {
+    setUploadedAttachments((current) => {
+      const removed = current.find(
+        (attachment) => attachment.id === attachmentId,
+      );
+      if (removed) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+
+      const next = current.filter(
+        (attachment) => attachment.id !== attachmentId,
+      );
+      uploadedAttachmentsRef.current = next;
+      return next;
+    });
+  }
+
+  function updateUploadedAttachmentExplanation(
+    attachmentId: string,
+    explanation: string,
+  ) {
+    setUploadedAttachments((current) => {
+      const next = current.map((attachment) =>
+        attachment.id === attachmentId
+          ? { ...attachment, explanation }
+          : attachment,
+      );
+      uploadedAttachmentsRef.current = next;
+      return next;
+    });
+  }
+
+  function updateFigmaSlot(
+    slotId: string,
+    update: Partial<Pick<FigmaContextSlot, "url" | "figma" | "error">>,
+  ) {
+    setFigmaSlots((current) =>
+      current.map((slot) =>
+        slot.id === slotId ? { ...slot, ...update } : slot,
+      ),
+    );
+  }
+
+  async function handleExtractFigma(slotId: string) {
+    const slot = figmaSlots.find((candidate) => candidate.id === slotId);
+    if (!slot) {
+      return;
+    }
+
+    setError(null);
+    setFigmaSlots((current) =>
+      current.map((candidate) =>
+        candidate.id === slotId
+          ? { ...candidate, loading: true, error: null }
+          : candidate,
+      ),
+    );
+
+    try {
+      const response = await postJson<FigmaExtractResponse>(
+        "/api/figma/extract",
+        { url: slot.url },
+      );
+      setFigmaSlots((current) =>
+        current.map((candidate) =>
+          candidate.id === slotId
+            ? { ...candidate, figma: response.figma, error: null }
+            : candidate,
+        ),
+      );
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to extract Figma context.";
+      setFigmaSlots((current) =>
+        current.map((candidate) =>
+          candidate.id === slotId
+            ? { ...candidate, error: message }
+            : candidate,
+        ),
+      );
+    } finally {
+      setFigmaSlots((current) =>
+        current.map((candidate) =>
+          candidate.id === slotId
+            ? { ...candidate, loading: false }
+            : candidate,
+        ),
+      );
+    }
+  }
+
+  async function handlePackageDataForCopilot() {
     if (!mergeRequest) {
       return;
     }
 
     setError(null);
+    setPackagingData(true);
 
-    const packageInput = {
-      generatedAt: new Date().toISOString(),
-      mergeRequest,
-      jiraIssue,
-    };
-    const folderName = getReviewPackageFolderName(mergeRequest);
-    const zipData = zipSync({
-      [`${folderName}/manifest.json`]: strToU8(
-        JSON.stringify(buildReviewPackageManifest(packageInput), null, 2),
-      ),
-      [`${folderName}/changes.patch`]: strToU8(
-        buildReviewPackagePatch(packageInput),
-      ),
-      [`${folderName}/summary.md`]: strToU8(
-        buildReviewPackageSummary(packageInput),
-      ),
-      [`${folderName}/agent-prompt.md`]: strToU8(
-        buildReviewPackageAgentPrompt(packageInput),
-      ),
-    });
+    try {
+      const packagedJiraAttachments = jiraIssue
+        ? await Promise.all(
+            jiraAttachments
+              .filter(
+                (attachment) => !excludedJiraAttachmentIds.has(attachment.id),
+              )
+              .map(async (attachment): Promise<PackageAttachment> => {
+                const response = await fetch(
+                  `/api/jira/attachments/${encodeURIComponent(jiraIssue.key)}/${encodeURIComponent(attachment.id)}`,
+                  { cache: "no-store" },
+                );
 
-    const blob = new Blob([zipData], {
-      type: "application/zip",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+                if (!response.ok) {
+                  const payload = (await response.json().catch(() => null)) as {
+                    error?: string;
+                  } | null;
+                  throw new Error(
+                    payload?.error ||
+                      `Unable to download ${attachment.filename}.`,
+                  );
+                }
 
-    link.href = url;
-    link.download = `${folderName}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+                const data = new Uint8Array(await response.arrayBuffer());
+                return {
+                  id: `jira-${attachment.id}`,
+                  source: "jira",
+                  filename: attachment.filename,
+                  mimeType: attachment.mimeType,
+                  size: data.byteLength,
+                  data,
+                  jiraAttachmentId: attachment.id,
+                  explanation:
+                    jiraAttachmentExplanations[attachment.id]?.trim() ?? "",
+                };
+              }),
+          )
+        : [];
+      const packagedUploads = await Promise.all(
+        uploadedAttachments.map(
+          async (attachment): Promise<PackageAttachment> => {
+            const data = new Uint8Array(await attachment.file.arrayBuffer());
+            return {
+              id: attachment.id,
+              source: "upload",
+              filename: attachment.file.name,
+              mimeType: attachment.file.type || "application/octet-stream",
+              size: data.byteLength,
+              data,
+              jiraAttachmentId: null,
+              explanation: attachment.explanation.trim(),
+            };
+          },
+        ),
+      );
+
+      const packageInput: ReviewPackageInput = {
+        generatedAt: new Date().toISOString(),
+        mergeRequest,
+        jiraIssue,
+        attachments: [...packagedJiraAttachments, ...packagedUploads],
+        figmaContexts: figmaSlots.flatMap((slot) =>
+          slot.figma ? [{ viewport: slot.viewport, context: slot.figma }] : [],
+        ),
+      };
+      const folderName = getReviewPackageFolderName(mergeRequest);
+      const zipEntries: Record<string, Uint8Array> = {};
+
+      for (const [fileName, content] of Object.entries(
+        buildReviewPackageFiles(packageInput),
+      )) {
+        zipEntries[`${folderName}/${fileName}`] =
+          typeof content === "string" ? strToU8(content) : content;
+      }
+
+      const zipData = zipSync(zipEntries);
+      const blob = new Blob([zipData], {
+        type: "application/zip",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${folderName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (packageError) {
+      setError(
+        packageError instanceof Error
+          ? packageError.message
+          : "Unable to build the review package.",
+      );
+    } finally {
+      setPackagingData(false);
+    }
   }
 
   function updateFinding(
@@ -411,7 +724,7 @@ export function ReviewDashboard() {
     review?.findings.filter((finding) => finding.approved).length ?? 0;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(30,64,175,0.42),transparent_24%),radial-gradient(circle_at_86%_12%,rgba(79,70,229,0.42),transparent_24%),radial-gradient(circle_at_78%_34%,rgba(251,146,60,0.34),transparent_20%),radial-gradient(circle_at_96%_72%,rgba(34,211,238,0.42),transparent_28%),radial-gradient(circle_at_12%_88%,rgba(14,165,233,0.38),transparent_24%),radial-gradient(circle_at_30%_66%,rgba(249,115,22,0.26),transparent_22%),radial-gradient(circle_at_54%_48%,rgba(37,99,235,0.26),transparent_32%),linear-gradient(155deg,#020617_0%,#082f49_22%,#172554_46%,#033348_72%,#010312_100%)] bg-fixed px-4 py-10 text-white sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(30,64,175,0.42),transparent_24%),radial-gradient(circle_at_86%_12%,rgba(79,70,229,0.42),transparent_24%),radial-gradient(circle_at_78%_34%,rgba(251,146,60,0.34),transparent_20%),radial-gradient(circle_at_96%_72%,rgba(34,211,238,0.42),transparent_28%),radial-gradient(circle_at_12%_88%,rgba(14,165,233,0.38),transparent_24%),radial-gradient(circle_at_30%_66%,rgba(249,115,22,0.26),transparent_22%),radial-gradient(circle_at_54%_48%,rgba(37,99,235,0.26),transparent_32%),linear-gradient(155deg,#0d1b33_0%,#0f4a6b_22%,#25397a_46%,#0b5070_72%,#0a1428_100%)] bg-fixed px-4 py-10 text-white sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <HeroLogo />
 
@@ -483,14 +796,87 @@ export function ReviewDashboard() {
           />
         </SectionCard>
 
+        {jiraIssue ? (
+          <>
+            <SectionCard
+              title="Attach Supporting Files"
+              eyebrow={<MedicalEyebrow>Review The Scans 🧾</MedicalEyebrow>}
+            >
+              {loadingJiraAttachments ? (
+                <p className="mb-4 rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-slate-100">
+                  Loading attachments from {jiraIssue.key}...
+                </p>
+              ) : null}
+              <AttachedFilesPanel
+                ticketKey={jiraIssue.key}
+                jiraAttachments={jiraAttachments.filter(
+                  (attachment) => !excludedJiraAttachmentIds.has(attachment.id),
+                )}
+                uploadedAttachments={uploadedAttachments}
+                jiraExplanations={jiraAttachmentExplanations}
+                onAddFiles={handleAddAttachmentFiles}
+                onExcludeJiraAttachment={(attachmentId) =>
+                  setExcludedJiraAttachmentIds((current) =>
+                    new Set(current).add(attachmentId),
+                  )
+                }
+                onRemoveUploadedAttachment={handleRemoveUploadedAttachment}
+                onJiraExplanationChange={(attachmentId, explanation) =>
+                  setJiraAttachmentExplanations((current) => ({
+                    ...current,
+                    [attachmentId]: explanation,
+                  }))
+                }
+                onUploadedExplanationChange={
+                  updateUploadedAttachmentExplanation
+                }
+              />
+            </SectionCard>
+
+            <SectionCard
+              title="Connect the Intended Experience"
+              eyebrow={<MedicalEyebrow>Optional Imaging 🩻</MedicalEyebrow>}
+            >
+              <p className="mb-6 text-sm text-slate-100">
+                Extract Figma context so the review agent can flag mismatches
+                between the merge request and the intended design.
+              </p>
+              {figmaSlots.map((slot, index) => (
+                <div
+                  key={slot.id}
+                  className={
+                    index > 0 ? "mt-6 border-t border-white/10 pt-6" : undefined
+                  }
+                >
+                  <FigmaContextPanel
+                    viewport={slot.viewport}
+                    figmaUrl={slot.url}
+                    figma={slot.figma}
+                    loading={slot.loading}
+                    error={slot.error}
+                    onUrlChange={(url) =>
+                      updateFigmaSlot(slot.id, { url, error: null })
+                    }
+                    onExtract={() => void handleExtractFigma(slot.id)}
+                    onClear={() =>
+                      updateFigmaSlot(slot.id, { figma: null, error: null })
+                    }
+                  />
+                </div>
+              ))}
+            </SectionCard>
+          </>
+        ) : null}
+
         <SectionCard
           title="Generate an AI-Powered Review"
           eyebrow={<MedicalEyebrow>Consult The Specialist 🧑‍⚕️</MedicalEyebrow>}
         >
           <ReviewControls
             onGenerate={() => setConfirmingReviewGeneration(true)}
-            onPackageData={handlePackageDataForCopilot}
+            onPackageData={() => void handlePackageDataForCopilot()}
             loading={loadingReview}
+            packaging={packagingData}
             canGenerate={Boolean(mergeRequest)}
           />
         </SectionCard>

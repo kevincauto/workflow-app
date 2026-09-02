@@ -1,9 +1,9 @@
-import { sanitizePackageName } from "@/lib/reviewPackage";
-import type {
-  FigmaViewport,
-  PackageAttachment,
-  TicketToCodePackageInput,
-} from "@/lib/types";
+import {
+  buildPackagedAttachments,
+  getFigmaFileName,
+  sanitizePackageName,
+} from "@/lib/reviewPackage";
+import type { FigmaViewport, TicketToCodePackageInput } from "@/lib/types";
 
 export type TicketToCodePackageFiles = Record<string, string | Uint8Array>;
 
@@ -13,38 +13,6 @@ function markdownText(value: string | null | undefined, fallback: string) {
 
 function getViewportLabel(viewport: FigmaViewport) {
   return viewport === "desktop" ? "Desktop View" : "Mobile View";
-}
-
-function getFigmaFileName(viewport: FigmaViewport) {
-  return `figma-context-${viewport}.json`;
-}
-
-function getFileExtension(filename: string) {
-  const extension = filename.match(/\.([a-zA-Z0-9]{1,10})$/)?.[1];
-  return extension ? `.${extension.toLowerCase()}` : "";
-}
-
-function buildPackagedAttachments(attachments: PackageAttachment[]) {
-  const usedNames = new Set<string>();
-
-  return attachments.map((attachment, index) => {
-    const extension = getFileExtension(attachment.filename);
-    const filenameWithoutExtension = extension
-      ? attachment.filename.slice(0, -extension.length)
-      : attachment.filename;
-    const baseName =
-      sanitizePackageName(filenameWithoutExtension) || `image-${index + 1}`;
-    let packagedName = `${baseName}${extension}`;
-    let suffix = 2;
-
-    while (usedNames.has(packagedName)) {
-      packagedName = `${baseName}-${suffix}${extension}`;
-      suffix += 1;
-    }
-
-    usedNames.add(packagedName);
-    return { attachment, path: `attachments/${packagedName}` };
-  });
 }
 
 export function getTicketToCodePackageFolderName(

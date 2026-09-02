@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07111f;
+  --background: #0d1b33;
   --foreground: #f8fafc;
   --font-display: "Avenir Next", Avenir, "Century Gothic", sans-serif;
   --font-code: "SFMono-Regular", Consolas, "Liberation Mono", monospace;

@@ -687,6 +687,47 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
   };
 }
 
+export async function listJiraAttachments(
+  ticketKey: string,
+): Promise<JiraAttachment[]> {
+  if (!isJiraConfigured()) {
+    return ticketKey === mockJiraIssue.key
+      ? [
+          {
+            id: "mock-ticket-image",
+            filename: "jira-story-reference.svg",
+            mimeType: "image/svg+xml",
+            size: null,
+          },
+        ]
+      : [];
+  }
+
+  let payload: { fields?: { attachment?: JiraAttachmentPayload[] } } | null =
+    null;
+  let lastError: Error | null = null;
+
+  for (const version of getJiraApiVersions()) {
+    try {
+      payload = await fetchJiraJson(
+        `/rest/api/${version}/issue/${encodeURIComponent(ticketKey)}?fields=attachment`,
+      );
+      break;
+    } catch (error) {
+      lastError =
+        error instanceof Error
+          ? error
+          : new Error("Unable to load Jira attachments.");
+    }
+  }
+
+  if (!payload) {
+    throw lastError ?? new Error("Unable to load Jira attachments.");
+  }
+
+  return normalizeAttachments(payload.fields?.attachment);
+}
+
 export async function getJiraAttachmentContent(
   ticketKey: string,
   attachmentId: string,

@@ -34,28 +34,31 @@ export function groupMergeRequestThreads(
     groups.set(comment.discussionId, group);
   }
 
-  return Array.from(groups, ([discussionId, groupedComments]): MergeRequestThread => {
-    const sortedComments = [...groupedComments].sort(compareComments);
-    const locationComment = sortedComments.find((comment) => comment.filePath);
-    const resolvableComments = sortedComments.filter(
-      (comment) => comment.resolvable,
-    );
+  return Array.from(
+    groups,
+    ([discussionId, groupedComments]): MergeRequestThread => {
+      const sortedComments = [...groupedComments].sort(compareComments);
+      const locationComment = sortedComments.find(
+        (comment) => comment.filePath,
+      );
+      const resolvableComments = sortedComments.filter(
+        (comment) => comment.resolvable,
+      );
 
-    return {
-      discussionId,
-      comments: sortedComments,
-      filePath: locationComment?.filePath ?? null,
-      lineNumber: locationComment?.lineNumber ?? null,
-      status:
-        resolvableComments.length === 0
-          ? "not-resolvable"
-          : resolvableComments.every((comment) => comment.resolved)
-            ? "resolved"
-            : "unresolved",
-    };
-  }).sort((left, right) =>
-    compareComments(left.comments[0], right.comments[0]),
-  );
+      return {
+        discussionId,
+        comments: sortedComments,
+        filePath: locationComment?.filePath ?? null,
+        lineNumber: locationComment?.lineNumber ?? null,
+        status:
+          resolvableComments.length === 0
+            ? "not-resolvable"
+            : resolvableComments.every((comment) => comment.resolved)
+              ? "resolved"
+              : "unresolved",
+      };
+    },
+  ).sort((left, right) => compareComments(left.comments[0], right.comments[0]));
 }
 
 function getFileStatus(file: ChangedFile) {
@@ -269,9 +272,7 @@ export function buildThreadResolutionPatch(
   input: ThreadResolutionPackageInput,
 ) {
   return buildReviewPackagePatch({
-    generatedAt: input.generatedAt,
     mergeRequest: input.mergeRequest,
-    jiraIssue: null,
   });
 }
 
