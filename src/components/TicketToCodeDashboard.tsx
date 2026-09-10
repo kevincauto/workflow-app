@@ -48,6 +48,7 @@ const workflowSteps = [
     id: "ticket",
     label: "Select Ticket",
     eyebrow: "Jira Source",
+    gradientClassName: "from-blue-400 to-blue-600",
     activeLabelClassName: "text-blue-300",
     activeClassName: "border-blue-400/35 bg-blue-400/12",
     activeMarkerClassName: "border-blue-400/30 bg-blue-400/10 text-blue-200",
@@ -56,6 +57,7 @@ const workflowSteps = [
     id: "requirements",
     label: "Edit Ticket",
     eyebrow: "Mission Details",
+    gradientClassName: "from-amber-300 to-orange-500",
     activeLabelClassName: "text-amber-200",
     activeClassName: "border-amber-300/35 bg-amber-300/12",
     activeMarkerClassName: "border-amber-300/30 bg-amber-300/10 text-amber-100",
@@ -64,6 +66,7 @@ const workflowSteps = [
     id: "references",
     label: "Add Files",
     eyebrow: "Files and Images",
+    gradientClassName: "from-rose-400 to-red-500",
     activeLabelClassName: "text-red-400",
     activeClassName: "border-red-300/35 bg-red-300/12",
     activeMarkerClassName: "border-red-300/30 bg-red-300/10 text-red-100",
@@ -72,6 +75,7 @@ const workflowSteps = [
     id: "design",
     label: "Add Figma",
     eyebrow: "Optional Figma",
+    gradientClassName: "from-emerald-400 to-teal-500",
     activeLabelClassName: "text-emerald-200",
     activeClassName: "border-emerald-300/35 bg-emerald-300/12",
     activeMarkerClassName:
@@ -463,6 +467,7 @@ export function TicketToCodeDashboard() {
   const activeStepIndex = workflowSteps.findIndex(
     (step) => step.id === activeStep,
   );
+  const activeStepGradient = workflowSteps[activeStepIndex].gradientClassName;
 
   function renderStepNavigation() {
     return (
@@ -492,7 +497,11 @@ export function TicketToCodeDashboard() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.32),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(168,85,247,0.26),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.24),transparent_28%),linear-gradient(145deg,#29384e_0%,#3d5069_46%,#34465d_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-375 flex-col gap-6">
-        <header className="rounded-lg border border-white/12 bg-slate-950/55 px-5 py-5 shadow-[0_28px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:px-6">
+        <header className="relative overflow-hidden rounded-lg border border-white/12 bg-slate-950/55 px-5 py-5 shadow-[0_28px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:px-6">
+          <div
+            className={`pointer-events-none absolute left-5 top-0 h-1.5 w-32 rounded-b-full bg-linear-to-r transition-colors duration-300 sm:left-6 ${activeStepGradient}`}
+            aria-hidden="true"
+          />
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-3xl">
               <div className="flex items-center gap-3">
@@ -501,7 +510,7 @@ export function TicketToCodeDashboard() {
                 </p>
               </div>
               <h1 className="mt-3 text-3xl font-bold leading-tight text-cyan-200 sm:text-4xl lg:text-5xl">
-                Cauto's Code Hero
+                Cauto&apos;s Code Hero
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
                 Suit up with Jira requirements, reference files, and Figma
