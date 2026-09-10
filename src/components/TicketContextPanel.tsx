@@ -50,10 +50,10 @@ export function TicketContextPanel({
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Key
           </p>
-          <div className="mt-2 flex items-center gap-2">
-            <p className="text-base font-semibold text-slate-50">
-              {ticket.key}
-            </p>
+          <p className="mt-2 text-base font-semibold text-slate-50">
+            {ticket.key}
+          </p>
+          <div className="mt-3 flex items-center gap-2">
             <a
               href={ticket.webUrl}
               target="_blank"
@@ -83,25 +83,6 @@ export function TicketContextPanel({
             {ticket.status ?? "Unknown"}
           </p>
         </div>
-        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
-            Priority
-          </p>
-          <p className="mt-2 text-base font-semibold text-slate-50">
-            {ticket.priority ?? "Unknown"}
-          </p>
-        </div>
-        <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
-            Sprint
-          </p>
-          <p className="mt-2 text-base font-semibold text-slate-50">
-            {ticket.sprint?.name ?? "Unknown"}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-lg border border-white/15 bg-white/[0.06] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Assignee

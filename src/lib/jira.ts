@@ -347,10 +347,10 @@ function getFieldName(value: unknown) {
   }
 
   const field = value as { name?: unknown; displayName?: unknown };
-  return typeof field.name === "string"
-    ? field.name
-    : typeof field.displayName === "string"
-      ? field.displayName
+  return typeof field.displayName === "string"
+    ? field.displayName
+    : typeof field.name === "string"
+      ? field.name
       : null;
 }
 
@@ -438,6 +438,34 @@ async function listEstimateFieldIds() {
   }
 
   return Array.from(new Set([...configuredFieldIds, ...discoveredFieldIds]));
+}
+
+async function resolveDeveloperFieldId() {
+  const configuredFieldId = getDeveloperFieldId();
+
+  if (configuredFieldId) {
+    return configuredFieldId;
+  }
+
+  const developerFieldName = normalizeFieldName(getDeveloperJqlField());
+
+  for (const version of getJiraApiVersions()) {
+    try {
+      const fields = await fetchJiraJson<JiraFieldPayload[]>(
+        `/rest/api/${version}/field`,
+      );
+      return (
+        fields.find(
+          (field) =>
+            field.id &&
+            field.name &&
+            normalizeFieldName(field.name) === developerFieldName,
+        )?.id ?? null
+      );
+    } catch {}
+  }
+
+  return null;
 }
 
 function getIssueEstimatePoints(
@@ -556,10 +584,10 @@ function mapSearchIssue(
   issue: JiraSearchIssuePayload,
   sprintById: Map<string, JiraSprintInfo>,
   estimateFieldIds: string[],
+  developerFieldId: string | null,
 ): JiraTicketOption {
   const fields = issue.fields ?? {};
   const developerFieldName = getDeveloperJqlField();
-  const developerFieldId = getDeveloperFieldId();
   const developer = developerFieldId
     ? getFieldString(fields[developerFieldId])
     : getFieldString(fields[developerFieldName]);
@@ -627,6 +655,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
   const { jqlValue, displayName } = getConfiguredAssignee();
   const { sprints, notices } = await listBoardSprints();
   const estimateFieldIds = await listEstimateFieldIds();
+  const developerFieldId = await resolveDeveloperFieldId();
   const sprintById = new Map(sprints.map((sprint) => [sprint.id, sprint]));
   const sprintClause = sprints.length
     ? ` AND sprint in (${sprints.map((sprint) => sprint.id).join(",")})`
@@ -644,7 +673,7 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
     "priority",
     "issuetype",
     "assignee",
-    getDeveloperFieldId() ?? getDeveloperJqlField(),
+    developerFieldId ?? getDeveloperJqlField(),
     ...estimateFieldIds,
     "updated",
     "attachment",
@@ -679,7 +708,9 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
 
   return {
     tickets: (response.issues ?? [])
-      .map((issue) => mapSearchIssue(issue, sprintById, estimateFieldIds))
+      .map((issue) =>
+        mapSearchIssue(issue, sprintById, estimateFieldIds, developerFieldId),
+      )
       .sort(sortTicketsBySprint),
     source: "live",
     assignee: displayName,

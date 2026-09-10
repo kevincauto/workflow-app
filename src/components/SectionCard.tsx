@@ -7,14 +7,14 @@ interface SectionCardProps {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
-  accent?: "cyan" | "amber" | "emerald" | "orange" | "purple" | "red";
+  accent?: "blue" | "amber" | "emerald" | "orange" | "purple" | "red";
   allowOverflow?: boolean;
 }
 
 const accentStyles = {
-  cyan: {
-    bar: "from-cyan-400 to-blue-500",
-    eyebrow: "text-cyan-200",
+  blue: {
+    bar: "from-blue-400 to-blue-600",
+    eyebrow: "text-blue-300",
   },
   amber: {
     bar: "from-amber-300 to-orange-500",
@@ -34,7 +34,7 @@ const accentStyles = {
   },
   red: {
     bar: "from-rose-400 to-red-500",
-    eyebrow: "text-red-200",
+    eyebrow: "text-red-400",
   },
 };
 

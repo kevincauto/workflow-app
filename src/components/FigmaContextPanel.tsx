@@ -40,7 +40,7 @@ export function FigmaContextPanel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
           {label}
         </p>
       </div>

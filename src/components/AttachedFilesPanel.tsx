@@ -292,7 +292,7 @@ export function AttachedFilesPanel({
                           onRemoveUploadedAttachment(attachment.attachmentId);
                         }
                       }}
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-rose-300/25 text-rose-200 transition hover:bg-rose-400/10 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-400/25 text-red-400 transition hover:bg-red-400/10 focus:outline-none focus:ring-2 focus:ring-red-400"
                       aria-label={`Remove ${attachment.filename} from package`}
                       title="Remove from package"
                     >
@@ -300,7 +300,7 @@ export function AttachedFilesPanel({
                     </button>
                   </div>
 
-                  <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-red-200/80">
+                  <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-red-400">
                     Context for {attachment.filename}
                     <textarea
                       value={attachment.explanation}
@@ -342,7 +342,7 @@ export function AttachedFilesPanel({
           addSelectedFiles(Array.from(event.dataTransfer.files));
         }}
       >
-        <Upload className="text-red-200" aria-hidden="true" size={28} />
+        <Upload className="text-red-400" aria-hidden="true" size={28} />
         <span className="text-sm font-semibold text-slate-100">
           Drop images or documents here, or choose files
         </span>

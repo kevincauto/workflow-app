@@ -44,10 +44,39 @@ interface FigmaContextSlot {
 }
 
 const workflowSteps = [
-  { id: "ticket", label: "Choose ticket", eyebrow: "Jira source" },
-  { id: "requirements", label: "Requirements", eyebrow: "Mission details" },
-  { id: "references", label: "References", eyebrow: "Files and images" },
-  { id: "design", label: "Design context", eyebrow: "Optional Figma" },
+  {
+    id: "ticket",
+    label: "Select Ticket",
+    eyebrow: "Jira Source",
+    activeLabelClassName: "text-blue-300",
+    activeClassName: "border-blue-400/35 bg-blue-400/12",
+    activeMarkerClassName: "border-blue-400/30 bg-blue-400/10 text-blue-200",
+  },
+  {
+    id: "requirements",
+    label: "Edit Ticket",
+    eyebrow: "Mission Details",
+    activeLabelClassName: "text-amber-200",
+    activeClassName: "border-amber-300/35 bg-amber-300/12",
+    activeMarkerClassName: "border-amber-300/30 bg-amber-300/10 text-amber-100",
+  },
+  {
+    id: "references",
+    label: "Add Files",
+    eyebrow: "Files and Images",
+    activeLabelClassName: "text-red-400",
+    activeClassName: "border-red-300/35 bg-red-300/12",
+    activeMarkerClassName: "border-red-300/30 bg-red-300/10 text-red-100",
+  },
+  {
+    id: "design",
+    label: "Add Figma",
+    eyebrow: "Optional Figma",
+    activeLabelClassName: "text-emerald-200",
+    activeClassName: "border-emerald-300/35 bg-emerald-300/12",
+    activeMarkerClassName:
+      "border-emerald-300/30 bg-emerald-300/10 text-emerald-100",
+  },
 ] as const;
 
 type WorkflowStepId = (typeof workflowSteps)[number]["id"];
@@ -467,14 +496,11 @@ export function TicketToCodeDashboard() {
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-3xl">
               <div className="flex items-center gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white">
                   Developer acceleration
                 </p>
-                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
-                  Hackweek
-                </span>
               </div>
-              <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">
+              <h1 className="mt-3 text-3xl font-bold leading-tight text-cyan-200 sm:text-4xl lg:text-5xl">
                 Cauto's Code Hero
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
@@ -517,8 +543,8 @@ export function TicketToCodeDashboard() {
             aria-label="Code package steps"
             className="rounded-lg border border-white/12 bg-slate-950/58 p-3 shadow-[0_22px_70px_rgba(2,6,23,0.3)] backdrop-blur-xl lg:sticky lg:top-6"
           >
-            <div className="mb-3 px-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            <div className="mb-3 px-2 pt-2 sm:pt-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
                 Code package
               </p>
             </div>
@@ -535,17 +561,15 @@ export function TicketToCodeDashboard() {
                     aria-current={isActive ? "step" : undefined}
                     className={`group flex min-h-16 items-center gap-3 rounded-lg border px-3 py-2 text-left transition ${
                       isActive
-                        ? "border-cyan-300/35 bg-cyan-300/12"
+                        ? step.activeClassName
                         : "border-transparent hover:border-white/10 hover:bg-white/5"
                     }`}
                   >
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold ${
-                        isComplete
-                          ? "border-emerald-300/25 bg-emerald-300/12 text-emerald-200"
-                          : isActive
-                            ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
-                            : "border-white/10 bg-white/5 text-slate-400"
+                        isActive
+                          ? step.activeMarkerClassName
+                          : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
                       }`}
                     >
                       {isComplete ? (
@@ -555,7 +579,11 @@ export function TicketToCodeDashboard() {
                       )}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-white">
+                      <span
+                        className={`block text-sm font-semibold ${
+                          isActive ? step.activeLabelClassName : "text-cyan-200"
+                        }`}
+                      >
                         {step.label}
                       </span>
                       <span className="mt-0.5 block text-xs text-slate-400">
@@ -577,7 +605,7 @@ export function TicketToCodeDashboard() {
                 title="Choose your Jira ticket"
                 eyebrow="Step 1 of 4"
                 className="relative z-40 min-h-140"
-                accent="cyan"
+                accent="blue"
                 allowOverflow
                 footer={renderStepNavigation()}
               >
@@ -699,22 +727,22 @@ export function TicketToCodeDashboard() {
 
           <aside className="rounded-lg border border-white/12 bg-slate-950/70 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.38)] backdrop-blur-xl lg:sticky lg:top-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-violet-300/20 bg-violet-300/10 text-violet-200">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
                 <PackageCheck aria-hidden="true" size={20} />
               </span>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-200">
                   Package preview
                 </p>
                 <h2 className="mt-1 text-base font-semibold text-white">
-                  {selectedTicket?.key ?? "Code package"}
+                  {selectedTicket?.key ?? "Code Package"}
                 </h2>
               </div>
             </div>
 
             <div className="mt-5">
               <div className="flex items-center justify-between text-xs text-slate-300">
-                <span>Sources included</span>
+                <span>Sources Included</span>
                 <span className="font-semibold text-white">
                   {includedSourceCount}/4
                 </span>
@@ -729,21 +757,21 @@ export function TicketToCodeDashboard() {
 
             <div className="mt-5 divide-y divide-white/8 border-y border-white/8">
               {[
-                ["Jira ticket", selectedTicket?.key ?? "Not selected"],
+                ["Jira Ticket", selectedTicket?.key ?? "Not Selected"],
                 [
                   "Requirements",
-                  editedDescription.trim() ? "Included" : "Not included",
+                  editedDescription.trim() ? "Included" : "Not Included",
                 ],
                 [
-                  "Reference files",
+                  "Reference Files",
                   includedAttachmentCount
-                    ? `${includedAttachmentCount} included`
+                    ? `${includedAttachmentCount} Included`
                     : "Optional",
                 ],
                 [
-                  "Figma views",
+                  "Figma Views",
                   figmaContextCount
-                    ? `${figmaContextCount} included`
+                    ? `${figmaContextCount} Included`
                     : "Optional",
                 ],
               ].map(([label, value]) => (
@@ -785,7 +813,7 @@ export function TicketToCodeDashboard() {
               className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-cyan-200/30 bg-cyan-300/15 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:border-cyan-100/45 hover:bg-cyan-300/25 focus:outline-none focus:ring-2 focus:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-45"
             >
               <Download aria-hidden="true" size={17} />
-              {downloadingPackage ? "Packaging..." : "Download code package"}
+              {downloadingPackage ? "Packaging..." : "Download Code Package"}
             </button>
             <p className="mt-3 text-center text-xs leading-5 text-slate-500">
               Jira selection is required. References and design context are
