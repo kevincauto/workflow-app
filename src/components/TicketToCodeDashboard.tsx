@@ -495,7 +495,7 @@ export function TicketToCodeDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.42),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(34,211,238,0.38),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.34),transparent_28%),linear-gradient(145deg,#29384e_0%,#3d5069_46%,#34465d_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.42),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(34,211,238,0.38),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.34),transparent_28%),linear-gradient(145deg,#495d75_0%,#647994_46%,#566d88_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-375 flex-col gap-6">
         <header className="relative overflow-hidden rounded-lg border border-white/12 bg-slate-950/55 px-5 py-5 shadow-[0_28px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:px-6">
           <div
@@ -734,7 +734,11 @@ export function TicketToCodeDashboard() {
             ) : null}
           </div>
 
-          <aside className="rounded-lg border border-white/12 bg-slate-950/70 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.38)] backdrop-blur-xl lg:sticky lg:top-6">
+          <aside className="relative overflow-hidden rounded-lg border border-white/12 bg-slate-950/70 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.38)] backdrop-blur-xl lg:sticky lg:top-6">
+            <div
+              className={`pointer-events-none absolute bottom-0 left-1/2 h-1.5 w-24 -translate-x-1/2 rounded-t-full bg-linear-to-r transition-colors duration-300 ${activeStepGradient}`}
+              aria-hidden="true"
+            />
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
                 <PackageCheck aria-hidden="true" size={20} />

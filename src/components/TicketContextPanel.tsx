@@ -58,7 +58,7 @@ export function TicketContextPanel({
               href={ticket.webUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-amber-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-amber-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
               aria-label={`Open ${ticket.key} in Jira`}
               title="Open in Jira"
             >
@@ -67,7 +67,7 @@ export function TicketContextPanel({
             <button
               type="button"
               onClick={() => void copyTicketKey()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-amber-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-amber-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
               aria-label={`Copy Jira key ${ticket.key}`}
               title="Copy Jira key"
             >
