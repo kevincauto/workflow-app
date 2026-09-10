@@ -495,7 +495,7 @@ export function TicketToCodeDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.32),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(168,85,247,0.26),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.24),transparent_28%),linear-gradient(145deg,#29384e_0%,#3d5069_46%,#34465d_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.42),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(34,211,238,0.38),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.34),transparent_28%),linear-gradient(145deg,#29384e_0%,#3d5069_46%,#34465d_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-375 flex-col gap-6">
         <header className="relative overflow-hidden rounded-lg border border-white/12 bg-slate-950/55 px-5 py-5 shadow-[0_28px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:px-6">
           <div
@@ -509,7 +509,7 @@ export function TicketToCodeDashboard() {
                   Developer acceleration
                 </p>
               </div>
-              <h1 className="mt-3 text-3xl font-bold leading-tight text-cyan-200 sm:text-4xl lg:text-5xl">
+              <h1 className="mt-3 bg-linear-to-r from-cyan-400 to-emerald-400 bg-clip-text text-4xl font-bold leading-tight text-transparent sm:text-5xl lg:text-6xl">
                 Cauto&apos;s Code Hero
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
