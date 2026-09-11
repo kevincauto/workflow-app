@@ -236,7 +236,7 @@ export function HomeJiraTickets() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <a
-                        href={`/ticket-to-code?ticket=${encodeURIComponent(ticket.key)}`}
+                        href={`/code-hero?ticket=${encodeURIComponent(ticket.key)}`}
                         className="text-sm font-semibold text-cyan-100 transition hover:text-white"
                       >
                         {ticket.key}

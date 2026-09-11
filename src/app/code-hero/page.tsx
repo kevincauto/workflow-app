@@ -8,6 +8,6 @@ export const metadata: Metadata = {
     "Code Hero packages Jira requirements and optional Figma context for feature creation.",
 };
 
-export default function TicketToCodePage() {
+export default function CodeHeroPage() {
   return <TicketToCodeDashboard />;
 }

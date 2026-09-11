@@ -506,16 +506,15 @@ export function TicketToCodeDashboard() {
             <div className="max-w-3xl">
               <div className="flex items-center gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white">
-                  Developer acceleration
+                  Development Accelerator
                 </p>
               </div>
-              <h1 className="mt-3 bg-linear-to-r from-cyan-400 to-emerald-400 bg-clip-text text-4xl font-bold leading-tight text-transparent sm:text-5xl lg:text-6xl">
+              <h1 className="mt-3 bg-linear-to-r from-cyan-400 to-emerald-400 bg-clip-text text-[50px] font-bold leading-tight text-transparent">
                 Cauto&apos;s Code Hero
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                Suit up with Jira requirements, reference files, and Figma
-                designs, then send a code-ready mission package to your coding
-                agent.
+                Bundle context from Jira, Figma, and other files for AI coding
+                agents
               </p>
             </div>
             <Link
@@ -804,9 +803,9 @@ export function TicketToCodeDashboard() {
               <p className="mb-1 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-200">
                 Package contents
               </p>
+              <p>agent-prompt.md</p>
               <p>manifest.json</p>
               <p>ticket.md</p>
-              <p>agent-prompt.md</p>
               {figmaSlots.flatMap((slot) =>
                 slot.figma ? (
                   <p key={slot.id}>figma-context-{slot.viewport}.json</p>
@@ -815,7 +814,10 @@ export function TicketToCodeDashboard() {
                 ),
               )}
               {includedAttachmentCount ? (
-                <p>attachments/ ({includedAttachmentCount})</p>
+                <p>
+                  {includedAttachmentCount} additional file
+                  {includedAttachmentCount === 1 ? "" : "s"}
+                </p>
               ) : null}
             </div>
 

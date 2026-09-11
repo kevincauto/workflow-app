@@ -15,23 +15,45 @@ function getViewportLabel(viewport: FigmaViewport) {
   return viewport === "desktop" ? "Desktop View" : "Mobile View";
 }
 
+function buildRootPackagedAttachments(input: TicketToCodePackageInput) {
+  const usedNames = new Set([
+    "manifest.json",
+    "ticket.md",
+    "agent-prompt.md",
+    ...input.figmaContexts.map(({ viewport }) => getFigmaFileName(viewport)),
+  ]);
+
+  return buildPackagedAttachments(input.attachments).map(
+    ({ attachment, path }) => {
+      let rootPath = path.replace(/^attachments\//, "");
+
+      while (usedNames.has(rootPath)) {
+        rootPath = `attachment-${rootPath}`;
+      }
+
+      usedNames.add(rootPath);
+      return { attachment, path: rootPath };
+    },
+  );
+}
+
 export function getTicketToCodePackageFolderName(
   input: TicketToCodePackageInput,
 ) {
-  const safeKey = sanitizePackageName(input.ticket.key) || "ticket";
-  const safeSummary = sanitizePackageName(input.ticket.summary).slice(0, 40);
+  const safeKey =
+    sanitizePackageName(input.ticket.key).toUpperCase() || "TICKET";
 
-  return ["ticket-to-code", safeKey, safeSummary].filter(Boolean).join("-");
+  return `${safeKey}-code-package`;
 }
 
 export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
-  const packagedAttachments = buildPackagedAttachments(input.attachments);
+  const packagedAttachments = buildRootPackagedAttachments(input);
   const figmaFiles = input.figmaContexts.map(({ viewport }) =>
     getFigmaFileName(viewport),
   );
 
   return {
-    packageVersion: 5,
+    packageVersion: 6,
     generatedAt: input.generatedAt,
     intendedUse:
       "Feature creation context package for an IDE coding agent. Use the edited ticket description as the source of truth, with optional normalized Figma context as visual guidance.",
@@ -88,7 +110,7 @@ export function buildTicketToCodeManifest(input: TicketToCodePackageInput) {
       "The edited ticket description in ticket.md is the requirements source of truth.",
       "Figma context is normalized and intentionally compact; raw Figma payloads are excluded.",
       "Preview image URLs from Figma may expire or require access to the original file.",
-      "Jira and uploaded attachment binaries are stored under attachments/ and contain no credentials.",
+      "Jira and uploaded attachment binaries are stored at the package root and contain no credentials.",
     ],
   };
 }
@@ -116,7 +138,7 @@ export function buildTicketMarkdown(input: TicketToCodePackageInput) {
     "## Attached Images and Files",
     "",
     input.attachments.length
-      ? buildPackagedAttachments(input.attachments)
+      ? buildRootPackagedAttachments(input)
           .map(({ attachment, path }) =>
             [
               `- \`${path}\` (${attachment.source}, ${attachment.mimeType})`,
@@ -173,7 +195,7 @@ export function buildAgentPrompt(input: TicketToCodePackageInput) {
     "## Attachment References",
     "",
     input.attachments.length
-      ? "Inspect every supported file under `attachments/` as implementation context. Before interpreting a file, read its matching Context entry in `ticket.md` or explanation in `manifest.json`. Use the manifest to distinguish Jira attachments from session uploads. Treat attachment explanations as supporting context; the edited ticket requirements remain the source of truth."
+      ? "Inspect every supported attachment file at the package root as implementation context. Before interpreting a file, read its matching Context entry in `ticket.md` or explanation in `manifest.json`. Use the manifest to distinguish Jira attachments from session uploads. Treat attachment explanations as supporting context; the edited ticket requirements remain the source of truth."
       : "No attachment references are included.",
     "",
     "## Expected Agent Behavior",
@@ -203,9 +225,7 @@ export function buildTicketToCodePackageFiles(input: TicketToCodePackageInput) {
     );
   });
 
-  for (const { attachment, path } of buildPackagedAttachments(
-    input.attachments,
-  )) {
+  for (const { attachment, path } of buildRootPackagedAttachments(input)) {
     files[path] = attachment.data;
   }
 
