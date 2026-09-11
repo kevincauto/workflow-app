@@ -252,7 +252,7 @@ export function AttachedFilesPanel({
                     />
                   </button>
                 ) : (
-                  <div className="flex min-h-28 items-center justify-center bg-red-300/5 text-red-100">
+                  <div className="flex min-h-28 items-center justify-center bg-red-300/5 text-red-400">
                     <AttachmentIcon
                       filename={attachment.filename}
                       mimeType={attachment.mimeType}
@@ -276,7 +276,7 @@ export function AttachedFilesPanel({
                         href={attachment.src}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-300/30 text-red-100 transition hover:bg-red-300/10 focus:outline-none focus:ring-2 focus:ring-red-300"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-300/30 text-red-400 transition hover:bg-red-300/10 focus:outline-none focus:ring-2 focus:ring-red-300"
                         aria-label={`Open ${attachment.filename}`}
                         title="Open file"
                       >
@@ -382,7 +382,7 @@ export function AttachedFilesPanel({
           <button
             type="button"
             onClick={() => setActiveImage(null)}
-            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/20 bg-slate-950/80 text-white focus:outline-none focus:ring-2 focus:ring-red-300 sm:right-8 sm:top-8"
+            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/20 bg-slate-950/80 text-red-400 focus:outline-none focus:ring-2 focus:ring-red-300 sm:right-8 sm:top-8"
             aria-label="Close image preview"
             title="Close"
           >
