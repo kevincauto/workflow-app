@@ -50,15 +50,15 @@ export function TicketContextPanel({
           <p className="text-xs uppercase tracking-[0.16em] text-amber-200">
             Key
           </p>
-          <p className="mt-2 text-base font-semibold text-slate-50">
-            {ticket.key}
-          </p>
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2">
+            <p className="text-base font-semibold text-slate-50">
+              {ticket.key}
+            </p>
             <a
               href={ticket.webUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-amber-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 text-amber-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
               aria-label={`Open ${ticket.key} in Jira`}
               title="Open in Jira"
             >
@@ -67,7 +67,7 @@ export function TicketContextPanel({
             <button
               type="button"
               onClick={() => void copyTicketKey()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-amber-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 text-amber-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300"
               aria-label={`Copy Jira key ${ticket.key}`}
               title="Copy Jira key"
             >

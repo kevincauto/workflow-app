@@ -718,6 +718,65 @@ export async function listAssignedJiraTickets(): Promise<ListAssignedJiraTickets
   };
 }
 
+export function extractJiraKeyFromInput(input: string): string | null {
+  const matches = input.toUpperCase().match(jiraKeyPattern);
+  return matches?.[matches.length - 1] ?? null;
+}
+
+export async function getJiraTicketByKey(
+  key: string,
+): Promise<JiraTicketOption> {
+  if (!isJiraConfigured()) {
+    const mockTicket = getMockAssignedTickets().tickets[0];
+    return { ...mockTicket, key, webUrl: getJiraIssueWebUrl(key) };
+  }
+
+  const { sprints } = await listBoardSprints();
+  const estimateFieldIds = await listEstimateFieldIds();
+  const developerFieldId = await resolveDeveloperFieldId();
+  const sprintById = new Map(sprints.map((sprint) => [sprint.id, sprint]));
+  const fields = Array.from(
+    new Set([
+      "summary",
+      "description",
+      "status",
+      "priority",
+      "issuetype",
+      "assignee",
+      developerFieldId ?? getDeveloperJqlField(),
+      ...estimateFieldIds,
+      "updated",
+      "attachment",
+      process.env.JIRA_SPRINT_FIELD_ID || "customfield_10020",
+    ]),
+  );
+  let payload: JiraSearchIssuePayload | null = null;
+  let lastError: Error | null = null;
+
+  for (const version of getJiraApiVersions()) {
+    try {
+      payload = await fetchJiraJson<JiraSearchIssuePayload>(
+        `/rest/api/${version}/issue/${encodeURIComponent(key)}?fields=${encodeURIComponent(fields.join(","))}`,
+      );
+      break;
+    } catch (error) {
+      lastError =
+        error instanceof Error ? error : new Error("Jira lookup failed.");
+    }
+  }
+
+  if (!payload) {
+    throw lastError ?? new Error(`Unable to load Jira ticket ${key}.`);
+  }
+
+  return mapSearchIssue(
+    payload,
+    sprintById,
+    estimateFieldIds,
+    developerFieldId,
+  );
+}
+
 export async function listJiraAttachments(
   ticketKey: string,
 ): Promise<JiraAttachment[]> {

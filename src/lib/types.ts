@@ -54,6 +54,10 @@ export interface ListAssignedJiraTicketsResponse {
   notices: string[];
 }
 
+export interface LoadJiraTicketResponse {
+  ticket: JiraTicketOption;
+}
+
 export interface ListJiraAttachmentsResponse {
   attachments: JiraAttachment[];
 }

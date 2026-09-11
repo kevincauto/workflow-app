@@ -2,12 +2,9 @@
 
 import {
   ExternalLink,
-  FileArchive,
   FileSpreadsheet,
   FileText,
-  FileType,
   Image as ImageIcon,
-  Presentation,
   Trash2,
   Upload,
   X,
@@ -51,43 +48,27 @@ interface DisplayAttachment {
 
 const acceptedExtensions = new Set([
   "csv",
-  "doc",
-  "docx",
   "gif",
   "jpeg",
   "jpg",
   "json",
   "md",
-  "pdf",
   "png",
-  "ppt",
-  "pptx",
   "svg",
   "txt",
   "webp",
-  "xls",
-  "xlsx",
   "yaml",
   "yml",
-  "zip",
 ]);
 
 const fileInputAccept = [
   "image/*",
-  ".pdf",
   ".txt",
   ".md",
   ".json",
   ".csv",
-  ".doc",
-  ".docx",
-  ".xls",
-  ".xlsx",
-  ".ppt",
-  ".pptx",
   ".yaml",
   ".yml",
-  ".zip",
 ].join(",");
 
 function formatFileSize(size: number | null) {
@@ -131,20 +112,8 @@ function AttachmentIcon({
     return <ImageIcon {...iconProps} />;
   }
 
-  if (["xls", "xlsx", "csv"].includes(extension)) {
+  if (extension === "csv") {
     return <FileSpreadsheet {...iconProps} />;
-  }
-
-  if (["ppt", "pptx"].includes(extension)) {
-    return <Presentation {...iconProps} />;
-  }
-
-  if (extension === "zip") {
-    return <FileArchive {...iconProps} />;
-  }
-
-  if (["doc", "docx"].includes(extension)) {
-    return <FileType {...iconProps} />;
   }
 
   return <FileText {...iconProps} />;
@@ -220,13 +189,6 @@ export function AttachedFilesPanel({
 
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-sm leading-6 text-slate-200">
-          Jira attachments are included automatically. Add supporting files and
-          explain what the coding agent should learn from each one.
-        </p>
-      </div>
-
       {attachments.length ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {attachments.map((attachment) => {
@@ -344,10 +306,10 @@ export function AttachedFilesPanel({
       >
         <Upload className="text-red-400" aria-hidden="true" size={28} />
         <span className="text-sm font-semibold text-slate-100">
-          Drop images or documents here, or choose files
+          Drop images or text files here, or choose files
         </span>
         <span className="text-xs text-slate-400">
-          Images, PDF, text, Markdown, JSON, YAML, CSV, Office files, and ZIP
+          Images, text, Markdown, JSON, YAML, and CSV
         </span>
         <input
           type="file"

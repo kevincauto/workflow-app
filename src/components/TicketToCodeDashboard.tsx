@@ -29,6 +29,7 @@ import type {
   FigmaViewport,
   JiraTicketOption,
   ListAssignedJiraTicketsResponse,
+  LoadJiraTicketResponse,
   NormalizedFigmaContext,
   PackageAttachment,
   TicketToCodePackageInput,
@@ -56,7 +57,7 @@ const workflowSteps = [
   {
     id: "requirements",
     label: "Edit Ticket",
-    eyebrow: "Mission Details",
+    eyebrow: "Inspect Details",
     gradientClassName: "from-amber-300 to-orange-500",
     activeLabelClassName: "text-amber-200",
     activeClassName: "border-amber-300/35 bg-amber-300/12",
@@ -145,6 +146,8 @@ export function TicketToCodeDashboard() {
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingTickets, setLoadingTickets] = useState(false);
+  const [loadingTicketUrl, setLoadingTicketUrl] = useState(false);
+  const [ticketUrlError, setTicketUrlError] = useState<string | null>(null);
   const [downloadingPackage, setDownloadingPackage] = useState(false);
   const selectedTicketKeyRef = useRef("");
   const uploadedAttachmentsRef = useRef<UploadedTicketAttachment[]>([]);
@@ -224,6 +227,39 @@ export function TicketToCodeDashboard() {
 
     if (ticket) {
       setActiveStep("requirements");
+    }
+  }
+
+  async function handleLoadTicketFromUrl(url: string) {
+    setTicketUrlError(null);
+    setLoadingTicketUrl(true);
+
+    try {
+      const { ticket } = await postJson<LoadJiraTicketResponse>(
+        "/api/jira/ticket",
+        { url },
+      );
+
+      setTickets((current) =>
+        current.some((candidate) => candidate.key === ticket.key)
+          ? current.map((candidate) =>
+              candidate.key === ticket.key ? ticket : candidate,
+            )
+          : [ticket, ...current],
+      );
+      selectedTicketKeyRef.current = ticket.key;
+      setSelectedTicketKey(ticket.key);
+      setEditedDescription(ticket.description ?? "");
+      clearTicketAttachments();
+      setActiveStep("requirements");
+    } catch (requestError) {
+      setTicketUrlError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to load that Jira ticket.",
+      );
+    } finally {
+      setLoadingTicketUrl(false);
     }
   }
 
@@ -495,7 +531,11 @@ export function TicketToCodeDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.42),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(34,211,238,0.38),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.34),transparent_28%),linear-gradient(145deg,#495d75_0%,#647994_46%,#566d88_100%)] bg-fixed px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
+    <main className="min-h-screen px-4 py-8 text-slate-50 sm:px-6 lg:px-10">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.42),transparent_26%),radial-gradient(circle_at_84%_10%,rgba(34,211,238,0.38),transparent_24%),radial-gradient(circle_at_72%_70%,rgba(16,185,129,0.34),transparent_28%),linear-gradient(145deg,#495d75_0%,#647994_46%,#566d88_100%)]"
+      />
       <div className="mx-auto flex max-w-375 flex-col gap-6">
         <header className="relative overflow-hidden rounded-lg border border-white/12 bg-slate-950/55 px-5 py-5 shadow-[0_28px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:px-6">
           <div
@@ -610,30 +650,29 @@ export function TicketToCodeDashboard() {
           <div className="min-w-0 space-y-4">
             {activeStep === "ticket" ? (
               <SectionCard
-                title="Choose your Jira ticket"
+                title="Select a Jira Ticket"
                 eyebrow="Step 1 of 4"
-                className="relative z-40 min-h-140"
+                className="relative z-40"
                 accent="blue"
                 allowOverflow
                 footer={renderStepNavigation()}
               >
-                <p className="mb-5 max-w-2xl text-sm leading-6 text-slate-300">
-                  Start with the source of truth. Selecting a ticket loads its
-                  requirements and linked attachments into this workspace.
-                </p>
                 <TicketSelector
                   tickets={tickets}
                   selectedKey={selectedTicketKey}
                   loading={loadingTickets}
+                  urlLoading={loadingTicketUrl}
+                  urlError={ticketUrlError}
                   onSelectTicket={handleSelectTicket}
                   onRefresh={loadTickets}
+                  onLoadFromUrl={(url) => void handleLoadTicketFromUrl(url)}
                 />
               </SectionCard>
             ) : null}
 
             {activeStep === "requirements" ? (
               <SectionCard
-                title="Shape the mission requirements"
+                title="Edit Jira Ticket Description"
                 eyebrow="Step 2 of 4"
                 className="min-h-140"
                 accent="amber"
@@ -649,8 +688,8 @@ export function TicketToCodeDashboard() {
 
             {activeStep === "references" ? (
               <SectionCard
-                title="Add implementation references"
-                eyebrow="Step 3 of 4"
+                title="Add Additional Files and Images"
+                eyebrow="Step 3 of 4 · Optional"
                 className="min-h-140"
                 accent="red"
                 footer={renderStepNavigation()}
@@ -804,8 +843,12 @@ export function TicketToCodeDashboard() {
                 Package contents
               </p>
               <p>agent-prompt.md</p>
-              <p>manifest.json</p>
-              <p>ticket.md</p>
+              {selectedTicket ? (
+                <>
+                  <p>manifest.json</p>
+                  <p>ticket.md</p>
+                </>
+              ) : null}
               {figmaSlots.flatMap((slot) =>
                 slot.figma ? (
                   <p key={slot.id}>figma-context-{slot.viewport}.json</p>
@@ -830,10 +873,6 @@ export function TicketToCodeDashboard() {
               <Download aria-hidden="true" size={17} />
               {downloadingPackage ? "Packaging..." : "Download Code Package"}
             </button>
-            <p className="mt-3 text-center text-xs leading-5 text-slate-500">
-              Jira selection is required. References and design context are
-              optional.
-            </p>
           </aside>
         </div>
       </div>

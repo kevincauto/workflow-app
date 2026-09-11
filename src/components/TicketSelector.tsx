@@ -8,19 +8,26 @@ interface TicketSelectorProps {
   tickets: JiraTicketOption[];
   selectedKey: string;
   loading: boolean;
+  urlLoading: boolean;
+  urlError: string | null;
   onSelectTicket: (key: string) => void;
   onRefresh: () => void;
+  onLoadFromUrl: (url: string) => void;
 }
 
 export function TicketSelector({
   tickets,
   selectedKey,
   loading,
+  urlLoading,
+  urlError,
   onSelectTicket,
   onRefresh,
+  onLoadFromUrl,
 }: TicketSelectorProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [ticketFilter, setTicketFilter] = useState("");
+  const [ticketUrl, setTicketUrl] = useState("");
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.key === selectedKey) ?? null,
@@ -223,12 +230,50 @@ export function TicketSelector({
         </div>
       </div>
 
-      {selectedKey ? null : (
-        <div className="rounded-lg border border-dashed border-blue-300/30 bg-white/[0.05] p-4 text-sm text-slate-300">
-          Assigned or developer tickets will appear here when Jira is
-          configured.
+      <div className="rounded-lg border border-blue-300/20 bg-white/[0.06] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="mb-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-blue-300">
+            Load Ticket By URL
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Paste a Jira ticket URL or key to pull a ticket that is not in the
+            list above.
+          </p>
         </div>
-      )}
+
+        <form
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const trimmedUrl = ticketUrl.trim();
+
+            if (trimmedUrl) {
+              onLoadFromUrl(trimmedUrl);
+            }
+          }}
+        >
+          <input
+            value={ticketUrl}
+            onChange={(event) => setTicketUrl(event.target.value)}
+            placeholder="https://jira.ftscc.net/browse/ABC-1000"
+            aria-label="Jira ticket URL or key"
+            className="min-h-14 w-full rounded-lg border border-blue-300/25 bg-[#07111f] px-4 py-3 text-sm text-white shadow-[0_8px_24px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.06)] outline-none transition placeholder:text-slate-500 hover:border-blue-300/55 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30"
+          />
+          <button
+            type="submit"
+            disabled={urlLoading || !ticketUrl.trim()}
+            className="inline-flex w-36 self-stretch items-center justify-center rounded-lg border border-blue-300/25 bg-[#07111f] px-4 py-2.5 text-sm font-semibold text-blue-100 shadow-[0_8px_24px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-blue-300/55 hover:bg-[#0b192b] focus:outline-none focus:ring-2 focus:ring-blue-400/30 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {urlLoading ? "Loading..." : "Load Ticket"}
+          </button>
+        </form>
+
+        {urlError ? (
+          <p className="mt-3 text-sm text-amber-200" role="status">
+            {urlError}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
