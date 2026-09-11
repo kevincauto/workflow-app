@@ -217,11 +217,7 @@ export function FigmaContextPanel({
             ) : null}
           </div>
         </div>
-      ) : (
-        <div className="rounded-lg border border-dashed border-emerald-200/30 bg-white/[0.05] p-4 text-sm text-slate-300">
-          {label} Figma context is optional for the generated AI package.
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

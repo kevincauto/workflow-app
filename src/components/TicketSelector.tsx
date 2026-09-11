@@ -235,10 +235,6 @@ export function TicketSelector({
           <p className="text-xs uppercase tracking-[0.18em] text-blue-300">
             Load Ticket By URL
           </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Paste a Jira ticket URL or key to pull a ticket that is not in the
-            list above.
-          </p>
         </div>
 
         <form

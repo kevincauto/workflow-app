@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 interface SectionCardProps {
   title: string;
@@ -7,6 +7,7 @@ interface SectionCardProps {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  style?: CSSProperties;
   accent?: "blue" | "amber" | "emerald" | "orange" | "purple" | "red";
   allowOverflow?: boolean;
 }
@@ -45,6 +46,7 @@ export function SectionCard({
   children,
   footer,
   className,
+  style,
   accent,
   allowOverflow = false,
 }: SectionCardProps) {
@@ -52,6 +54,7 @@ export function SectionCard({
 
   return (
     <section
+      style={style}
       className={`relative flex flex-col rounded-lg border border-white/12 bg-slate-950/58 p-5 shadow-[0_22px_70px_rgba(2,6,23,0.34),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl sm:p-6 ${allowOverflow ? "overflow-visible" : "overflow-hidden"} ${className ?? ""}`}
     >
       {accentStyle ? (

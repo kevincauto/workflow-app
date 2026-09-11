@@ -151,6 +151,8 @@ export function TicketToCodeDashboard() {
   const [downloadingPackage, setDownloadingPackage] = useState(false);
   const selectedTicketKeyRef = useRef("");
   const uploadedAttachmentsRef = useRef<UploadedTicketAttachment[]>([]);
+  const navRef = useRef<HTMLElement | null>(null);
+  const [navHeight, setNavHeight] = useState<number | null>(null);
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.key === selectedTicketKey) ?? null,
@@ -216,6 +218,32 @@ export function TicketToCodeDashboard() {
     },
     [],
   );
+
+  // Step 4 mirrors the side nav height, which only shares a row on large screens.
+  useEffect(() => {
+    const navElement = navRef.current;
+
+    if (!navElement) {
+      return;
+    }
+
+    const wideLayout = window.matchMedia("(min-width: 1024px)");
+    const syncNavHeight = () => {
+      setNavHeight(
+        wideLayout.matches ? navElement.getBoundingClientRect().height : null,
+      );
+    };
+    const resizeObserver = new ResizeObserver(syncNavHeight);
+
+    resizeObserver.observe(navElement);
+    wideLayout.addEventListener("change", syncNavHeight);
+    syncNavHeight();
+
+    return () => {
+      resizeObserver.disconnect();
+      wideLayout.removeEventListener("change", syncNavHeight);
+    };
+  }, []);
 
   function handleSelectTicket(key: string) {
     const ticket = tickets.find((candidate) => candidate.key === key) ?? null;
@@ -588,6 +616,7 @@ export function TicketToCodeDashboard() {
 
         <div className="grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)_280px] xl:grid-cols-[240px_minmax(0,1fr)_300px]">
           <nav
+            ref={navRef}
             aria-label="Code package steps"
             className="rounded-lg border border-white/12 bg-slate-950/58 p-3 shadow-[0_22px_70px_rgba(2,6,23,0.3)] backdrop-blur-xl lg:sticky lg:top-6"
           >
@@ -730,17 +759,13 @@ export function TicketToCodeDashboard() {
 
             {activeStep === "design" ? (
               <SectionCard
-                title="Connect the intended experience"
+                title="Generate Machine-Readable Design Files From Figma Links"
                 eyebrow="Step 4 of 4 · Optional"
-                className="min-h-140"
+                style={navHeight ? { minHeight: navHeight } : undefined}
                 accent="emerald"
                 footer={renderStepNavigation()}
               >
                 <div className="space-y-6">
-                  <p className="text-sm leading-6 text-slate-300">
-                    Add desktop, mobile, or both Figma views. Extracted design
-                    details are labeled by viewport in the final package.
-                  </p>
                   {figmaSlots.map((slot, index) => (
                     <div
                       key={slot.id}
